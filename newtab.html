@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LaunchTab</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Clock / date — fixed top right -->
+  <aside class="clock-widget" aria-label="Current time and date">
+    <time id="time" class="clock-time" datetime=""></time>
+    <time id="date" class="clock-date" datetime=""></time>
+  </aside>
+
+  <!-- Central launcher -->
+  <main class="launcher" id="launcher" role="main">
+
+    <h1 class="greeting" aria-label="Launcher heading">Where to?</h1>
+
+    <!-- Search -->
+    <div class="search-wrapper" role="search">
+      <svg class="search-icon" aria-hidden="true" focusable="false"
+           viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M13.5 13.5L17 17" stroke="currentColor" stroke-width="1.6"
+              stroke-linecap="round"/>
+      </svg>
+
+      <input
+        id="search"
+        class="search-input"
+        type="text"
+        placeholder="Type a shortcut or name…"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
+        autofocus
+        aria-label="Search shortcuts"
+        aria-autocomplete="list"
+        aria-controls="results"
+        aria-expanded="false"
+        aria-haspopup="listbox"
+        role="combobox"
+      />
+
+      <span class="search-clear" id="search-clear" role="button"
+            aria-label="Clear search" tabindex="-1" hidden>
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6"
+                stroke-linecap="round"/>
+        </svg>
+      </span>
+
+      <kbd class="search-kbd-hint" aria-label="Keyboard shortcut: Command K">⌘K</kbd>
+    </div>
+
+    <!-- Results dropdown — hidden until query is non-empty -->
+    <div id="results-container" class="results-container" hidden aria-live="polite">
+      <ul
+        id="results"
+        class="results-list"
+        role="listbox"
+        aria-label="Matching shortcuts"
+      ></ul>
+      <p id="no-results" class="no-results" hidden>No shortcuts found.</p>
+    </div>
+
+    <!-- Default grid — shown when search is empty -->
+    <div id="default-grid" class="default-grid" aria-label="Quick access shortcuts">
+    </div>
+
+    <!-- Keyboard hints -->
+    <footer class="kbd-hints" role="contentinfo" aria-label="Keyboard navigation hints">
+      <span><kbd>Enter</kbd> open</span>
+      <span class="hints-sep" aria-hidden="true">·</span>
+      <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+      <span class="hints-sep" aria-hidden="true">·</span>
+      <span><kbd>Esc</kbd> clear</span>
+      <span class="hints-sep" aria-hidden="true">·</span>
+      <span><kbd>⌘K</kbd> focus</span>
+    </footer>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

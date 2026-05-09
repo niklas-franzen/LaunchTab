@@ -1,0 +1,663 @@
+/* ─── Reset & Base ───────────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ─── Design Tokens ──────────────────────────────────────────────────────── */
+
+:root {
+  --bg:             #1c1c1e;
+  --surface:        rgba(44, 44, 46, 0.78);
+  --surface-hover:  rgba(58, 58, 60, 0.9);
+  --surface-active: rgba(72, 72, 74, 0.95);
+  --text-primary:   #f5f5f7;
+  --text-secondary: #a1a1a6;
+  --text-muted:     #6e6e73;
+  --accent:         #0a84ff;
+  --accent-dim:     rgba(10, 132, 255, 0.18);
+  --accent-glow:    rgba(10, 132, 255, 0.12);
+  --border:         rgba(255, 255, 255, 0.08);
+  --border-focus:   rgba(10, 132, 255, 0.5);
+  --shadow-sm:      0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md:      0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-lg:      0 16px 48px rgba(0, 0, 0, 0.5);
+  --radius-sm:      10px;
+  --radius-md:      16px;
+  --radius-lg:      22px;
+  --radius-xl:      28px;
+  --font:           -apple-system, BlinkMacSystemFont, "SF Pro Display",
+                    "SF Pro Text", "Inter", "Segoe UI", sans-serif;
+  --font-mono:      "SF Mono", "Fira Code", "JetBrains Mono",
+                    "Cascadia Code", ui-monospace, monospace;
+  --transition:     150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Document ───────────────────────────────────────────────────────────── */
+
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font);
+  background-color: var(--bg);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(44, 44, 46, 0.6) 0%, transparent 70%);
+}
+
+/* ─── Clock Widget ───────────────────────────────────────────────────────── */
+
+.clock-widget {
+  position: fixed;
+  top: 28px;
+  right: 32px;
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  user-select: none;
+  pointer-events: none;
+}
+
+.clock-time {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text-secondary);
+  line-height: 1.2;
+}
+
+.clock-date {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+
+/* ─── Launcher Container ─────────────────────────────────────────────────── */
+
+.launcher {
+  width: 100%;
+  max-width: 720px;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+/* ─── Greeting ───────────────────────────────────────────────────────────── */
+
+.greeting {
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+  text-align: center;
+  line-height: 1.1;
+  text-rendering: optimizeLegibility;
+}
+
+/* ─── Search Wrapper ─────────────────────────────────────────────────────── */
+
+.search-wrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 18px;
+  width: 18px;
+  height: 18px;
+  color: var(--text-muted);
+  pointer-events: none;
+  flex-shrink: 0;
+  transition: color var(--transition);
+}
+
+.search-wrapper:focus-within .search-icon {
+  color: var(--text-secondary);
+}
+
+.search-input {
+  width: 100%;
+  height: 56px;
+  padding: 0 88px 0 50px;
+  font-family: var(--font);
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  outline: none;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition),
+    background var(--transition);
+  caret-color: var(--accent);
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.search-input:focus {
+  border-color: var(--border-focus);
+  background: rgba(44, 44, 46, 0.92);
+  box-shadow:
+    var(--shadow-sm),
+    0 0 0 3px var(--accent-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Clear button */
+
+.search-clear {
+  position: absolute;
+  right: 52px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: background var(--transition), color var(--transition);
+}
+
+.search-clear svg {
+  width: 10px;
+  height: 10px;
+}
+
+.search-clear:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: var(--text-secondary);
+}
+
+/* ⌘K hint badge */
+
+.search-kbd-hint {
+  position: absolute;
+  right: 16px;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 6px;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+  transition: opacity var(--transition);
+  white-space: nowrap;
+}
+
+.search-wrapper:focus-within .search-kbd-hint {
+  opacity: 0;
+}
+
+.search-wrapper:focus-within .search-clear[hidden] {
+  display: none;
+}
+
+/* ─── Results Container ──────────────────────────────────────────────────── */
+
+.results-container {
+  margin-top: 8px;
+  background: rgba(36, 36, 38, 0.96);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: var(--shadow-md);
+  animation: slideDown var(--transition-slow) ease-out both;
+}
+
+.results-container[hidden] {
+  display: none;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ─── Results List ───────────────────────────────────────────────────────── */
+
+.results-list {
+  list-style: none;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 420px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.results-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.results-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.results-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+/* ─── Result Item ────────────────────────────────────────────────────────── */
+
+.result-item {
+  /* icon | key-badge | name+domain | category-badge */
+  display: grid;
+  grid-template-columns: 22px auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    box-shadow var(--transition);
+  /*
+   * IMPORTANT: Do NOT set opacity: 0 here.
+   * The animation uses fill-mode: both, so the `from` keyframe handles the
+   * initial hidden state. If the animation doesn't run for any reason
+   * (Chrome extension quirk, prefers-reduced-motion), items stay visible.
+   */
+  animation: fadeItem var(--transition-slow) ease-out both;
+  animation-delay: calc(var(--item-index, 0) * 25ms);
+}
+
+@keyframes fadeItem {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.result-item:hover {
+  background: var(--surface-hover);
+}
+
+.result-item[aria-selected="true"] {
+  background: var(--surface-active);
+  /* Outer ring + left accent bar — classic macOS sidebar selection pattern */
+  box-shadow:
+    inset 0 0 0 1px rgba(10, 132, 255, 0.28),
+    inset 3px 0 0 rgba(10, 132, 255, 0.65);
+}
+
+/* ─── Site Icons (shared between result items and grid cards) ────────────── */
+
+/*
+ * .site-icon is the wrapper. Sizing is controlled per-context (.result-icon,
+ * .grid-card-icon). Swap favicon URLs for local assets by changing .icon-img
+ * src in JS — the layout stays identical.
+ */
+
+.site-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.result-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.grid-card-icon {
+  width: 20px;
+  height: 20px;
+  margin-bottom: 2px;
+  border-radius: 4px;
+}
+
+/* Favicon <img> */
+.icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: inherit;
+  /* Avoid blurry 16px favicons when scaled up */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* Emoji icon */
+.icon-emoji {
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* Fallback: first letter in accent circle — shown when favicon fails to load */
+.icon-fallback {
+  width: 100%;
+  height: 100%;
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  /* hidden by default; JS sets display:flex on img error */
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
+}
+
+/* Key badge */
+
+.result-key {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid rgba(10, 132, 255, 0.25);
+  border-radius: 6px;
+  padding: 2px 6px;
+  letter-spacing: 0.02em;
+  text-align: center;
+  white-space: nowrap;
+  justify-self: start;
+  line-height: 1.5;
+  min-width: 24px;
+}
+
+/* Name + domain column */
+
+.result-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.result-name {
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.35;
+}
+
+.result-domain {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.35;
+}
+
+/* Category badge */
+
+.result-category {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+  justify-self: end;
+  line-height: 1.5;
+}
+
+/* Matched-text highlights inside name / key */
+
+.result-name mark,
+.result-key mark {
+  background: transparent;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* No-results message */
+
+.no-results {
+  padding: 20px 18px;
+  font-size: 14px;
+  color: var(--text-muted);
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+
+.no-results[hidden] {
+  display: none;
+}
+
+/* ─── Default Grid ───────────────────────────────────────────────────────── */
+
+.default-grid {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  transition: opacity var(--transition-slow);
+}
+
+.default-grid.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Grid card */
+
+.grid-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    border-color var(--transition),
+    transform var(--transition);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  text-align: left;
+  text-decoration: none;
+  /*
+   * Same fix as .result-item — no static opacity: 0.
+   * Animation handles the fade-in via fill-mode: both.
+   */
+  animation: fadeItem var(--transition-slow) ease-out both;
+  animation-delay: calc(var(--item-index, 0) * 40ms);
+}
+
+.grid-card:hover {
+  background: var(--surface-hover);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.grid-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.grid-card-key {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+
+.grid-card-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.grid-card-category {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+
+/* ─── Keyboard Hints ─────────────────────────────────────────────────────── */
+
+.kbd-hints {
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  user-select: none;
+  pointer-events: none;
+}
+
+.kbd-hints span {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  letter-spacing: 0.01em;
+}
+
+.kbd-hints kbd {
+  font-family: var(--font);
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 5px;
+  padding: 1px 5px;
+  letter-spacing: 0.01em;
+  line-height: 1.5;
+}
+
+.hints-sep {
+  color: var(--border);
+  font-size: 13px;
+}
+
+/* ─── Focus Visible ──────────────────────────────────────────────────────── */
+
+.result-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .launcher {
+    padding: 0 16px;
+  }
+
+  .greeting {
+    font-size: 26px;
+    margin-bottom: 16px;
+  }
+
+  .search-input {
+    height: 50px;
+    font-size: 16px;
+  }
+
+  .default-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .clock-widget {
+    top: 16px;
+    right: 20px;
+  }
+
+  .clock-time {
+    font-size: 13px;
+  }
+
+  .clock-date {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 380px) {
+  .default-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Reduced Motion ─────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

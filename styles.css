@@ -441,6 +441,18 @@ body {
   min-width: 24px;
 }
 
+/* Search-fallback key badge — replaces the shortcut-key accent style with a
+   neutral magnifying-glass badge so it doesn't look like a typo-able key */
+.result-key--search {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 5px;
+}
+
 /* Name + domain column */
 
 .result-main {
@@ -640,6 +652,44 @@ body {
 .hints-sep {
   color: var(--border);
   font-size: 13px;
+}
+
+/* ─── Settings Button ────────────────────────────────────────────────────────
+ *
+ * Fixed bottom-right alongside the kbd-hints. The same bottom value keeps
+ * everything on one visual baseline. pointer-events: all overrides the parent's
+ * none so the button remains clickable.
+ *
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+.settings-btn {
+  position: fixed;
+  bottom: 48px;
+  right: 32px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-muted);
+  pointer-events: all;   /* parent .kbd-hints has pointer-events:none; this is a sibling so no issue */
+  transition: color var(--transition), background var(--transition);
+  padding: 0;
+  z-index: 100;
+}
+
+.settings-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.settings-btn:hover {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.07);
 }
 
 /* ─── Focus Visible ──────────────────────────────────────────────────────── */

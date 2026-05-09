@@ -247,6 +247,23 @@ function buildIconElement(shortcut, wrapperClass) {
   return wrapper;
 }
 
+/* ─── Google Search Fallback ─────────────────────────────────────────────────
+ *
+ * Creates a synthetic result object representing a Google web search.
+ * Used in two cases:
+ *   A) No shortcuts matched the query → show Google search as the only result
+ *   B) User typed "g " prefix → force Google search for the remainder
+ *
+ * Empty query → url is "" so openActive() skips navigation.
+ *
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+function createGoogleSearchResult(query) {
+  const q   = query.trim();
+  const url = q ? `https://www.google.com/search?q=${encodeURIComponent(q)}` : "";
+  return { type: "search", name: "Search Google", query: q, url, category: "Search" };
+}
+
 /* ─── Render: Result Item ────────────────────────────────────────────────── */
 
 function createResultItem(shortcut, index, query) {
@@ -256,6 +273,45 @@ function createResultItem(shortcut, index, query) {
   li.setAttribute("aria-selected", "false");
   li.style.setProperty("--item-index", index);
 
+  if (shortcut.type === "search") {
+    // ── Google search fallback item
+    li.appendChild(buildIconElement(
+      { url: "https://www.google.com", name: "Google" }, "result-icon"
+    ));
+
+    const searchKey = document.createElement("span");
+    searchKey.className = "result-key result-key--search";
+    searchKey.setAttribute("aria-hidden", "true");
+    // Magnifying-glass glyph — same stroke style as the rest of the UI
+    searchKey.innerHTML =
+      `<svg viewBox="0 0 14 14" fill="none" width="12" height="12" aria-hidden="true">` +
+      `<circle cx="5.5" cy="5.5" r="4" stroke="currentColor" stroke-width="1.5"/>` +
+      `<path d="M9 9l2.5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>` +
+      `</svg>`;
+    li.appendChild(searchKey);
+
+    const mainSpan   = document.createElement("span");
+    mainSpan.className = "result-main";
+    const nameSpan   = document.createElement("span");
+    nameSpan.className   = "result-name";
+    nameSpan.textContent = "Search Google";
+    const subSpan    = document.createElement("span");
+    subSpan.className   = "result-domain";
+    subSpan.textContent = shortcut.query ? `for "${shortcut.query}"` : "Type to search…";
+    mainSpan.append(nameSpan, subSpan);
+    li.appendChild(mainSpan);
+
+    const catSpan = document.createElement("span");
+    catSpan.className   = "result-category";
+    catSpan.textContent = "Search";
+    li.appendChild(catSpan);
+
+    if (shortcut.url) li.addEventListener("click", () => navigateTo(shortcut.url));
+    li.addEventListener("mouseenter", () => setActiveIndex(index));
+    return li;
+  }
+
+  // ── Regular shortcut item
   li.appendChild(buildIconElement(shortcut, "result-icon"));
 
   const keySpan = document.createElement("span");
@@ -367,20 +423,36 @@ function setActiveIndex(index) {
 function navigateTo(url) { window.location.href = url; }
 
 function openActive() {
-  if (activeIndex >= 0 && currentResults[activeIndex]) {
-    navigateTo(currentResults[activeIndex].url);
-    return;
-  }
-  if (currentResults.length > 0) navigateTo(currentResults[0].url);
+  // Guard: search fallback with empty query (user typed "g " with nothing after)
+  // has url === "" — skip navigation in that case.
+  const pick = activeIndex >= 0 ? currentResults[activeIndex] : currentResults[0];
+  if (pick && pick.url) navigateTo(pick.url);
 }
 
 /* ─── Events ─────────────────────────────────────────────────────────────── */
 
 searchInput.addEventListener("input", () => {
-  const query = searchInput.value;
-  clearBtn.hidden = query.length === 0;
-  if (!query.trim()) { showDefaultGrid(); return; }
-  showResults(search(query), query);
+  const raw = searchInput.value;
+  clearBtn.hidden = raw.length === 0;
+
+  if (!raw.trim()) { showDefaultGrid(); return; }
+
+  // "g " prefix (lowercase g + space) → force Google search for the remainder.
+  // "g" alone still opens the Google shortcut via normal scoring.
+  if (/^g\s/.test(raw)) {
+    const q = raw.slice(2).trim();
+    showResults([createGoogleSearchResult(q)], "");
+    return;
+  }
+
+  const results = search(raw);
+  if (results.length === 0) {
+    // No shortcuts matched → show Google search as the single fallback result
+    showResults([createGoogleSearchResult(raw)], raw);
+    return;
+  }
+
+  showResults(results, raw);
 });
 
 searchInput.addEventListener("keydown", (e) => {
@@ -421,6 +493,16 @@ clearBtn.addEventListener("click", () => {
   clearBtn.hidden   = true;
   showDefaultGrid();
   focusSearch();
+});
+
+/* ─── Settings Button ────────────────────────────────────────────────────── */
+
+document.getElementById("settings-btn").addEventListener("click", () => {
+  if (chrome.runtime.openOptionsPage) {
+    chrome.runtime.openOptionsPage();
+  } else {
+    window.open(chrome.runtime.getURL("options.html"));
+  }
 });
 
 /* ─── Init ───────────────────────────────────────────────────────────────── */

@@ -72,18 +72,26 @@
     <div id="default-grid" class="default-grid" aria-label="Quick access shortcuts">
     </div>
 
-    <!-- Keyboard hints — fixed at bottom of viewport via CSS -->
-    <footer class="kbd-hints" role="contentinfo" aria-label="Keyboard navigation hints">
-      <span><kbd>Enter</kbd> open</span>
-      <span class="hints-sep" aria-hidden="true">·</span>
-      <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
-      <span class="hints-sep" aria-hidden="true">·</span>
-      <span><kbd>Esc</kbd> clear</span>
-      <span class="hints-sep" aria-hidden="true">·</span>
-      <span><kbd>⌘K</kbd> focus</span>
-    </footer>
-
   </main>
+
+  <!--
+    Keyboard hints live OUTSIDE <main class="launcher"> intentionally.
+    The launcher uses transform: translateX(-50%) for centering, which creates
+    a new stacking/containing context. A position:fixed child inside a
+    transformed parent is anchored to that parent — not the viewport — causing
+    the hints to scroll with the content. By placing the footer here as a
+    direct child of <body> (which has no transform), position:fixed works
+    correctly and the hints stay locked to the bottom of the viewport.
+  -->
+  <footer class="kbd-hints" role="contentinfo" aria-label="Keyboard navigation hints">
+    <span><kbd>Enter</kbd> open</span>
+    <span class="hints-sep" aria-hidden="true">·</span>
+    <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+    <span class="hints-sep" aria-hidden="true">·</span>
+    <span><kbd>Esc</kbd> clear</span>
+    <span class="hints-sep" aria-hidden="true">·</span>
+    <span><kbd>⌘K</kbd> focus</span>
+  </footer>
 
   <script src="script.js"></script>
 </body>

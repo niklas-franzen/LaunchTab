@@ -106,7 +106,9 @@ body {
   transform: translateX(-50%);
   width: 100%;
   max-width: 720px;
-  padding: 0 24px;
+  /* bottom padding reserves space above the fixed keyboard hints so the
+     default grid never slides underneath them */
+  padding: 0 24px 80px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -278,8 +280,14 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  /* clamp ensures results don't extend beyond the viewport on short screens */
-  max-height: clamp(200px, calc(100vh - 440px), 420px);
+  /*
+   * clamp keeps results within the viewport above the fixed keyboard hints.
+   * Formula: 68vh - 200px ≈ viewport height minus the space consumed by the
+   * launcher top offset (~32%), the search/greeting above results (~120px),
+   * and the fixed hints at the bottom (~80px). This prevents results from
+   * ever sliding behind the hints on any common screen size.
+   */
+  max-height: clamp(150px, calc(68vh - 200px), 420px);
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
@@ -582,15 +590,22 @@ body {
 /* ─── Keyboard Hints ─────────────────────────────────────────────────────── */
 
 .kbd-hints {
-  /* Fixed at the bottom of the viewport — completely outside the flow so it
-     never contributes to the launcher's height and never causes jumping. */
+  /*
+   * Fixed at the bottom of the viewport so hints are always visible and
+   * never shift with search results. bottom: 48px leaves breathing room
+   * above Chrome's own new-tab footer UI ("Chrome anpassen" bar).
+   * z-index: 100 keeps hints on top of any overflowing content.
+   * The launcher's padding-bottom: 80px ensures the default grid stops
+   * above this area so nothing is hidden behind the hints.
+   */
   position: fixed;
-  bottom: 20px;
+  bottom: 48px;
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
   max-width: 720px;
   padding: 0 24px;
+  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -638,6 +653,11 @@ body {
 
 @media (max-width: 600px) {
   .launcher {
+    padding: 0 16px 72px; /* maintain bottom gap above fixed hints */
+  }
+
+  .kbd-hints {
+    bottom: 36px; /* slightly closer to bottom on small screens */
     padding: 0 16px;
   }
 

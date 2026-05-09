@@ -1,0 +1,19 @@
+/* Minimal styles for the new-tab redirect stub page (newtab.html).
+   Extracted from the former inline <style> block to satisfy MV3 CSP
+   which blocks both inline scripts and can flag inline styles. */
+
+html, body {
+  margin: 0;
+  background: #1c1c1e; /* match app.html background so there is no flash */
+}
+
+/* Fallback link — only visible if JS is disabled or the redirect fails */
+.fallback-link {
+  color: #f5f5f7;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 15px;
+  padding: 20px;
+  display: block;
+  text-decoration: none;
+  opacity: 0.7;
+}

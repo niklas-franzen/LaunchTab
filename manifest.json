@@ -3,14 +3,26 @@
   "name": "LaunchTab",
   "short_name": "LaunchTab",
   "description": "A minimal Apple-inspired fuzzy shortcut launcher for your new tab.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "chrome_url_overrides": {
     "newtab": "newtab.html"
   },
+  "action": {
+    "default_title": "Add to LaunchTab",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16":  "assets/icons/icon16.png",
+      "32":  "assets/icons/icon32.png",
+      "48":  "assets/icons/icon48.png",
+      "128": "assets/icons/icon128.png"
+    }
+  },
+  "options_page": "options.html",
+  "permissions": ["storage", "activeTab"],
   "icons": {
-    "16": "assets/icons/icon16.png",
-    "32": "assets/icons/icon32.png",
-    "48": "assets/icons/icon48.png",
+    "16":  "assets/icons/icon16.png",
+    "32":  "assets/icons/icon32.png",
+    "48":  "assets/icons/icon48.png",
     "128": "assets/icons/icon128.png"
   }
 }

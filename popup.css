@@ -1,0 +1,187 @@
+/* ─── Design Tokens ──────────────────────────────────────────────────────── */
+
+:root {
+  --bg:           #1c1c1e;
+  --surface:      rgba(44, 44, 46, 0.98);
+  --text-primary: #f5f5f7;
+  --text-secondary:#a1a1a6;
+  --text-muted:   #6e6e73;
+  --accent:       #0a84ff;
+  --border:       rgba(255, 255, 255, 0.08);
+  --border-focus: rgba(10, 132, 255, 0.5);
+  --danger:       #ff453a;
+  --success:      #30d158;
+  --radius-sm:    10px;
+  --radius-md:    14px;
+  --font:         -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+                  "Inter", "Segoe UI", sans-serif;
+  --font-mono:    "SF Mono", "Fira Code", ui-monospace, monospace;
+  --transition:   150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  min-width: 320px;
+  width: 320px;
+}
+
+/* ─── Popup wrapper ──────────────────────────────────────────────────────── */
+
+.popup {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.brand-name {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* ─── Body ───────────────────────────────────────────────────────────────── */
+
+.popup-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.popup-body[hidden] { display: none; }
+
+.popup-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-bottom: -4px;
+}
+
+/* ─── Form fields ────────────────────────────────────────────────────────── */
+
+.field-stack { display: flex; flex-direction: column; gap: 10px; }
+
+.field-wrap { display: flex; flex-direction: column; gap: 5px; }
+
+.field-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.field-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color var(--transition), background var(--transition);
+}
+.field-input::placeholder { color: var(--text-muted); }
+.field-input:focus {
+  border-color: var(--border-focus);
+  background: rgba(255,255,255,.08);
+}
+
+.field-mono { font-family: var(--font-mono); font-size: 13px; }
+
+.field-error {
+  font-size: 12px;
+  color: var(--danger);
+  margin-top: -4px;
+}
+.field-error[hidden] { display: none; }
+
+/* ─── Add button ─────────────────────────────────────────────────────────── */
+
+.btn-add {
+  width: 100%;
+  height: 40px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition);
+  letter-spacing: -0.01em;
+  margin-top: 2px;
+}
+.btn-add:hover { background: #0070e0; }
+.btn-add:active { background: #005bbf; }
+
+/* ─── Settings link ──────────────────────────────────────────────────────── */
+
+.settings-link {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-decoration: none;
+  text-align: center;
+  transition: color var(--transition);
+}
+.settings-link:hover { color: var(--text-secondary); }
+
+/* ─── Success view ───────────────────────────────────────────────────────── */
+
+.popup-success {
+  align-items: center;
+  padding: 28px 16px;
+  gap: 8px;
+}
+
+.success-icon { width: 44px; height: 44px; }
+
+.success-title {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--success);
+}
+
+.success-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ─── Blocked / error view ───────────────────────────────────────────────── */
+
+.popup-blocked { align-items: center; padding: 24px 16px; }
+
+.blocked-msg {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.5;
+}

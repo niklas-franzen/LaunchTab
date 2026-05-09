@@ -1,0 +1,398 @@
+/* ─── Design Tokens (mirrors app styles.css) ─────────────────────────────── */
+
+:root {
+  --bg:             #1c1c1e;
+  --surface:        rgba(44, 44, 46, 0.95);
+  --surface-hover:  rgba(58, 58, 60, 0.95);
+  --surface-active: rgba(72, 72, 74, 1);
+  --text-primary:   #f5f5f7;
+  --text-secondary: #a1a1a6;
+  --text-muted:     #6e6e73;
+  --accent:         #0a84ff;
+  --accent-dim:     rgba(10, 132, 255, 0.18);
+  --danger:         #ff453a;
+  --danger-dim:     rgba(255, 69, 58, 0.15);
+  --border:         rgba(255, 255, 255, 0.08);
+  --border-focus:   rgba(10, 132, 255, 0.5);
+  --shadow-sm:      0 2px 8px rgba(0,0,0,.3);
+  --shadow-md:      0 8px 32px rgba(0,0,0,.4);
+  --radius-sm:      10px;
+  --radius-md:      14px;
+  --radius-lg:      20px;
+  --font:           -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+                    "Inter", "Segoe UI", sans-serif;
+  --font-mono:      "SF Mono", "Fira Code", ui-monospace, monospace;
+  --transition:     150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Reset ──────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ─── Page ───────────────────────────────────────────────────────────────── */
+
+html, body {
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+.page {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.brand-name {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.brand-sub {
+  font-size: 14px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* ─── Toolbar ────────────────────────────────────────────────────────────── */
+
+.toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.filter-input {
+  flex: 1;
+  height: 40px;
+  padding: 0 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 14px;
+  outline: none;
+  transition: border-color var(--transition);
+}
+
+.filter-input::placeholder { color: var(--text-muted); }
+.filter-input:focus { border-color: var(--border-focus); }
+
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition), opacity var(--transition);
+  padding: 0 16px;
+  height: 40px;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover { background: #0070e0; }
+
+.btn-ghost {
+  background: rgba(255,255,255,0.07);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { background: rgba(255,255,255,0.12); }
+
+.btn-sm { height: 34px; font-size: 13px; padding: 0 12px; }
+
+/* ─── Shortcut List ──────────────────────────────────────────────────────── */
+
+.shortcut-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.shortcut-item {
+  display: grid;
+  /* favicon | key | name | domain | category | actions */
+  grid-template-columns: 28px 56px 1fr 160px 100px 80px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: background var(--transition);
+}
+
+.shortcut-item:hover { background: var(--surface-hover); }
+
+.item-favicon-wrap {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.item-favicon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  object-fit: contain;
+}
+
+.item-favicon-fallback {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font);
+  text-transform: uppercase;
+}
+
+.item-key {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid rgba(10,132,255,.25);
+  border-radius: 6px;
+  padding: 2px 7px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  justify-self: start;
+}
+
+.item-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-domain {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-category {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  background: rgba(255,255,255,.06);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+.item-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.btn-icon {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,.06);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: background var(--transition), color var(--transition);
+  flex-shrink: 0;
+}
+.btn-icon svg { width: 14px; height: 14px; }
+.btn-icon:hover { background: rgba(255,255,255,.12); color: var(--text-secondary); }
+.btn-icon--danger:hover { background: var(--danger-dim); color: var(--danger); border-color: rgba(255,69,58,.3); }
+
+/* Inline delete confirmation */
+.confirm-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.confirm-label { font-size: 12px; color: var(--danger); }
+.btn-confirm-yes {
+  height: 26px; padding: 0 10px; font-size: 12px; font-weight: 500;
+  background: var(--danger); color: #fff; border: none;
+  border-radius: 6px; cursor: pointer;
+}
+.btn-confirm-yes:hover { background: #e03e34; }
+.btn-confirm-no {
+  height: 26px; padding: 0 10px; font-size: 12px;
+  background: rgba(255,255,255,.07); color: var(--text-muted);
+  border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+}
+
+.empty-state {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* ─── Add / Edit Form Card ───────────────────────────────────────────────── */
+
+.form-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+}
+
+.form-card[hidden] { display: none; }
+
+.form-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 20px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.field-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-wrap--full {
+  grid-column: 1 / -1;
+}
+
+.field-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.field-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 14px;
+  outline: none;
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.field-input::placeholder { color: var(--text-muted); }
+.field-input:focus {
+  border-color: var(--border-focus);
+  background: rgba(255,255,255,.07);
+}
+
+.field-mono { font-family: var(--font-mono); }
+
+.form-error {
+  font-size: 13px;
+  color: var(--danger);
+  margin-top: 10px;
+}
+.form-error[hidden] { display: none; }
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+/* ─── Status Banner ──────────────────────────────────────────────────────── */
+
+.status-banner {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+}
+.status-banner[hidden] { display: none; }
+.status-banner--ok      { background: rgba(48,209,88,.15); color: #30d158; border: 1px solid rgba(48,209,88,.25); }
+.status-banner--error   { background: var(--danger-dim); color: var(--danger); border: 1px solid rgba(255,69,58,.25); }
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .shortcut-item {
+    grid-template-columns: 28px auto 1fr auto;
+  }
+  .item-domain, .item-category { display: none; }
+
+  .form-grid { grid-template-columns: 1fr; }
+  .field-wrap--full { grid-column: 1; }
+}

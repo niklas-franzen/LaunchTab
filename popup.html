@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add to LaunchTab</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup">
+
+    <header class="popup-header">
+      <span class="brand-dot"></span>
+      <span class="brand-name">LaunchTab</span>
+    </header>
+
+    <div id="view-form" class="popup-body">
+      <p class="popup-subtitle">Add current page</p>
+
+      <div class="field-stack">
+        <label class="field-wrap">
+          <span class="field-label">Name</span>
+          <input id="p-name" type="text" class="field-input"
+                 placeholder="e.g. GitHub" maxlength="80" autocomplete="off">
+        </label>
+        <label class="field-wrap">
+          <span class="field-label">Shortcut key</span>
+          <input id="p-key" type="text" class="field-input field-mono"
+                 placeholder="e.g. gh" maxlength="20" autocomplete="off" spellcheck="false">
+        </label>
+        <label class="field-wrap">
+          <span class="field-label">URL</span>
+          <input id="p-url" type="text" class="field-input"
+                 placeholder="https://github.com" autocomplete="off" spellcheck="false">
+        </label>
+        <label class="field-wrap">
+          <span class="field-label">Category</span>
+          <input id="p-category" type="text" class="field-input"
+                 placeholder="e.g. Dev" maxlength="40" autocomplete="off">
+        </label>
+      </div>
+
+      <p id="p-error" class="field-error" hidden></p>
+
+      <button id="btn-add" class="btn-add">Add to LaunchTab</button>
+
+      <a id="settings-link" href="options.html" target="_blank" class="settings-link">
+        Open Settings ↗
+      </a>
+    </div>
+
+    <div id="view-success" class="popup-body popup-success" hidden>
+      <svg class="success-icon" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="11" stroke="#30d158" stroke-width="1.5"/>
+        <path d="M7 12l3.5 3.5L17 8.5" stroke="#30d158" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <p class="success-title">Added!</p>
+      <p id="success-msg" class="success-sub"></p>
+    </div>
+
+    <div id="view-error" class="popup-body popup-blocked" hidden>
+      <p class="blocked-msg">Navigate to a regular webpage first, then click the LaunchTab icon.</p>
+    </div>
+
+  </div>
+
+  <script src="defaults.js"></script>
+  <script src="storage.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

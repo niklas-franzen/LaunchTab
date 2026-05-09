@@ -50,9 +50,11 @@ body {
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /*
+   * No flex centering here. The launcher uses absolute positioning so
+   * it stays at a fixed vertical position regardless of results count.
+   */
+  position: relative;
   background-image:
     radial-gradient(ellipse 80% 60% at 50% 0%, rgba(44, 44, 46, 0.6) 0%, transparent 70%);
 }
@@ -89,6 +91,19 @@ body {
 /* ─── Launcher Container ─────────────────────────────────────────────────── */
 
 .launcher {
+  /*
+   * Absolute positioning anchors the top of the launcher (= greeting line)
+   * at a fixed vertical position. When results appear below the search field
+   * they grow downward — the search field itself never moves.
+   *
+   * clamp(): 80px minimum keeps the launcher on-screen on very short displays;
+   * 300px maximum prevents it from sliding too far down on tall monitors.
+   * ~32% lands the search field at roughly 40% of the viewport — Spotlight-like.
+   */
+  position: absolute;
+  top: clamp(80px, 32%, 300px);
+  left: 50%;
+  transform: translateX(-50%);
   width: 100%;
   max-width: 720px;
   padding: 0 24px;
@@ -263,7 +278,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-height: 420px;
+  /* clamp ensures results don't extend beyond the viewport on short screens */
+  max-height: clamp(200px, calc(100vh - 440px), 420px);
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
@@ -493,12 +509,12 @@ body {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  transition: opacity var(--transition-slow);
 }
 
 .default-grid.hidden {
-  opacity: 0;
-  pointer-events: none;
+  /* display: none collapses the space so the launcher doesn't grow when
+     the grid is hidden during a search (no invisible placeholder height). */
+  display: none;
 }
 
 /* Grid card */
@@ -566,7 +582,15 @@ body {
 /* ─── Keyboard Hints ─────────────────────────────────────────────────────── */
 
 .kbd-hints {
-  margin-top: 24px;
+  /* Fixed at the bottom of the viewport — completely outside the flow so it
+     never contributes to the launcher's height and never causes jumping. */
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 720px;
+  padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: center;

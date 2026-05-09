@@ -83,6 +83,10 @@ document.addEventListener("visibilitychange", () => {
   if (!document.hidden && searchInput.value === "") focusSearch();
 });
 
+// pageshow fires on initial load AND when Chrome restores the page from the
+// back-forward cache (bfcache) — important since app.html?x may be cached.
+window.addEventListener("pageshow", () => focusSearch());
+
 // Click anywhere on non-interactive background → re-focus the search field
 document.addEventListener("click", (e) => {
   const isInteractive = e.target.closest(

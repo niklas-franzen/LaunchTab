@@ -31,7 +31,7 @@ function createFaviconUrl(url) {
     encodeURIComponent(getDomain(url));
 }
 
-/* ─── CRUD ───────────────────────────────────────────────────────────────── */
+/* ─── Shortcuts CRUD ─────────────────────────────────────────────────────── */
 
 function getShortcuts() {
   return new Promise(resolve => {
@@ -40,7 +40,6 @@ function getShortcuts() {
       if (stored && stored.length > 0) {
         resolve(stored);
       } else {
-        // First run — seed from defaults
         const defaults = DEFAULT_SHORTCUTS.map(s => ({ ...s }));
         chrome.storage.local.set({ [STORAGE_KEY]: defaults }, () => resolve(defaults));
       }
@@ -79,4 +78,70 @@ function deleteShortcut(key) {
 function resetShortcuts() {
   const defaults = DEFAULT_SHORTCUTS.map(s => ({ ...s }));
   return saveShortcuts(defaults).then(() => defaults);
+}
+
+/* ─── Appearance Settings ────────────────────────────────────────────────────
+ *
+ * Stored in chrome.storage.local. Theme + accent are also mirrored to
+ * localStorage (by themes.js#applyTheme) for instant no-flash application
+ * on the next page load.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+const APPEARANCE_KEY = "launchtab_appearance";
+
+const DEFAULT_APPEARANCE = {
+  theme:          "graphite",
+  accent:         "blue",
+  showWeather:    false,
+  showHints:      true,
+  showMostVisited: true,
+  showBookmarks:  false,
+};
+
+function getAppearance() {
+  return new Promise(resolve => {
+    chrome.storage.local.get([APPEARANCE_KEY], r => {
+      resolve({ ...DEFAULT_APPEARANCE, ...(r[APPEARANCE_KEY] || {}) });
+    });
+  });
+}
+
+function saveAppearance(settings) {
+  // Mirror theme+accent to localStorage for instant no-flash application
+  try {
+    localStorage.setItem("lt_theme",  settings.theme  || "graphite");
+    localStorage.setItem("lt_accent", settings.accent || "blue");
+  } catch (_) { /* ignore */ }
+  return new Promise(resolve => {
+    chrome.storage.local.set({ [APPEARANCE_KEY]: settings }, resolve);
+  });
+}
+
+/* ─── Usage Tracking ─────────────────────────────────────────────────────────
+ *
+ * Tracks how many times each shortcut key has been opened. Used to sort the
+ * default grid ("most visited"). No data leaves the device.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+const USAGE_KEY = "launchtab_usage";
+
+function getUsageData() {
+  return new Promise(resolve => {
+    chrome.storage.local.get([USAGE_KEY], r => resolve(r[USAGE_KEY] || {}));
+  });
+}
+
+function incrementUsage(shortcutKey) {
+  return getUsageData().then(data => {
+    data[shortcutKey] = (data[shortcutKey] || 0) + 1;
+    return new Promise(resolve => {
+      chrome.storage.local.set({ [USAGE_KEY]: data }, resolve);
+    });
+  });
+}
+
+function resetUsageData() {
+  return new Promise(resolve => {
+    chrome.storage.local.set({ [USAGE_KEY]: {} }, resolve);
+  });
 }

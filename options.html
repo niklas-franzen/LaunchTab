@@ -4,69 +4,228 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LaunchTab Settings</title>
+  <script src="themes.js"></script>
   <link rel="stylesheet" href="options.css">
 </head>
 <body>
   <div class="page">
 
+    <!-- Header -->
     <header class="page-header">
-      <div class="header-brand">
-        <span class="brand-dot"></span>
-        <span class="brand-name">LaunchTab</span>
-        <span class="brand-sub">Settings</span>
-      </div>
-      <button id="btn-reset" class="btn btn-ghost btn-sm">Reset to defaults</button>
+      <button id="btn-back" class="btn-back" title="Back to LaunchTab" aria-label="Back to LaunchTab">
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M12 4L5 10l7 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        LaunchTab
+      </button>
+
+      <nav class="tab-nav" role="tablist">
+        <button class="tab-btn active" data-tab="shortcuts" role="tab">Shortcuts</button>
+        <button class="tab-btn" data-tab="engines" role="tab">Search</button>
+        <button class="tab-btn" data-tab="appearance" role="tab">Appearance</button>
+        <button class="tab-btn" data-tab="bookmarks" role="tab">Bookmarks</button>
+      </nav>
     </header>
 
-    <div class="toolbar">
-      <input id="filter-input" type="text" class="filter-input"
-             placeholder="Filter shortcuts…" autocomplete="off" spellcheck="false">
-      <button id="btn-add" class="btn btn-primary">+ Add shortcut</button>
-    </div>
+    <!-- ── Tab: Shortcuts ─────────────────────────────────────────── -->
+    <div id="tab-shortcuts" class="tab-panel active" role="tabpanel">
 
-    <div id="shortcut-list" class="shortcut-list" role="list"></div>
-
-    <!-- Add / Edit form — hidden until user clicks Add or Edit -->
-    <div id="form-card" class="form-card" hidden>
-      <h2 id="form-title" class="form-card-title">Add shortcut</h2>
-
-      <div class="form-grid">
-        <label class="field-wrap">
-          <span class="field-label">Shortcut key</span>
-          <input id="f-key" type="text" class="field-input field-mono"
-                 placeholder="e.g. gh" maxlength="20" autocomplete="off" spellcheck="false">
-        </label>
-        <label class="field-wrap">
-          <span class="field-label">Name</span>
-          <input id="f-name" type="text" class="field-input"
-                 placeholder="e.g. GitHub" maxlength="80" autocomplete="off">
-        </label>
-        <label class="field-wrap field-wrap--full">
-          <span class="field-label">URL</span>
-          <input id="f-url" type="text" class="field-input"
-                 placeholder="https://github.com" autocomplete="off" spellcheck="false">
-        </label>
-        <label class="field-wrap">
-          <span class="field-label">Category</span>
-          <input id="f-category" type="text" class="field-input"
-                 placeholder="e.g. Dev" maxlength="40" autocomplete="off">
-        </label>
+      <div class="toolbar">
+        <input id="filter-input" type="text" class="filter-input"
+               placeholder="Filter shortcuts…" autocomplete="off" spellcheck="false">
+        <button id="btn-add" class="btn btn-primary">+ Add shortcut</button>
+        <button id="btn-reset-shortcuts" class="btn btn-ghost btn-sm">Reset defaults</button>
       </div>
 
-      <p id="form-error" class="form-error" hidden></p>
+      <div id="shortcut-list" class="shortcut-list" role="list"></div>
 
-      <div class="form-actions">
-        <button id="btn-save" class="btn btn-primary">Save</button>
-        <button id="btn-cancel" class="btn btn-ghost">Cancel</button>
+      <div id="form-card" class="form-card" hidden>
+        <h2 id="form-title" class="form-card-title">Add shortcut</h2>
+        <div class="form-grid">
+          <label class="field-wrap">
+            <span class="field-label">Shortcut key</span>
+            <input id="f-key" type="text" class="field-input field-mono"
+                   placeholder="e.g. gh" maxlength="20" autocomplete="off" spellcheck="false">
+          </label>
+          <label class="field-wrap">
+            <span class="field-label">Name</span>
+            <input id="f-name" type="text" class="field-input"
+                   placeholder="e.g. GitHub" maxlength="80" autocomplete="off">
+          </label>
+          <label class="field-wrap field-wrap--full">
+            <span class="field-label">URL</span>
+            <input id="f-url" type="text" class="field-input"
+                   placeholder="https://github.com" autocomplete="off" spellcheck="false">
+          </label>
+          <label class="field-wrap">
+            <span class="field-label">Category</span>
+            <input id="f-category" type="text" class="field-input"
+                   placeholder="e.g. Dev" maxlength="40" autocomplete="off">
+          </label>
+        </div>
+        <p id="form-error" class="form-error" hidden></p>
+        <div class="form-actions">
+          <button id="btn-save" class="btn btn-primary">Save</button>
+          <button id="btn-cancel" class="btn btn-ghost">Cancel</button>
+        </div>
       </div>
-    </div>
+
+    </div><!-- /tab-shortcuts -->
+
+    <!-- ── Tab: Search Engines ────────────────────────────────────── -->
+    <div id="tab-engines" class="tab-panel" role="tabpanel">
+
+      <div class="toolbar">
+        <span class="toolbar-info">Type <code class="inline-code">key query</code> to search — e.g. <code class="inline-code">yt deadlift</code></span>
+        <button id="btn-add-engine" class="btn btn-primary">+ Add engine</button>
+        <button id="btn-reset-engines" class="btn btn-ghost btn-sm">Reset defaults</button>
+      </div>
+
+      <div id="engine-list" class="shortcut-list" role="list"></div>
+
+      <div id="engine-form-card" class="form-card" hidden>
+        <h2 id="engine-form-title" class="form-card-title">Add search engine</h2>
+        <div class="form-grid">
+          <label class="field-wrap">
+            <span class="field-label">Prefix key</span>
+            <input id="ef-key" type="text" class="field-input field-mono"
+                   placeholder="e.g. yt" maxlength="20" autocomplete="off" spellcheck="false">
+          </label>
+          <label class="field-wrap">
+            <span class="field-label">Name</span>
+            <input id="ef-name" type="text" class="field-input"
+                   placeholder="e.g. YouTube" maxlength="60" autocomplete="off">
+          </label>
+          <label class="field-wrap field-wrap--full">
+            <span class="field-label">Search URL <span class="field-label-note">(use {query} as placeholder)</span></span>
+            <input id="ef-url" type="text" class="field-input"
+                   placeholder="https://example.com/search?q={query}"
+                   autocomplete="off" spellcheck="false">
+          </label>
+        </div>
+        <p id="engine-form-error" class="form-error" hidden></p>
+        <div class="form-actions">
+          <button id="btn-engine-save" class="btn btn-primary">Save</button>
+          <button id="btn-engine-cancel" class="btn btn-ghost">Cancel</button>
+        </div>
+      </div>
+
+    </div><!-- /tab-engines -->
+
+    <!-- ── Tab: Appearance ────────────────────────────────────────── -->
+    <div id="tab-appearance" class="tab-panel" role="tabpanel">
+
+      <section class="settings-section">
+        <h2 class="section-title">Theme</h2>
+        <div class="theme-grid">
+          <button class="theme-swatch" data-theme="graphite" title="Graphite">
+            <span class="swatch-preview" style="background:#1c1c1e;border-color:rgba(255,255,255,.1)"></span>
+            <span class="swatch-label">Graphite</span>
+          </button>
+          <button class="theme-swatch" data-theme="midnight" title="Midnight">
+            <span class="swatch-preview" style="background:#0d0f1a;border-color:rgba(200,210,255,.15)"></span>
+            <span class="swatch-label">Midnight</span>
+          </button>
+          <button class="theme-swatch" data-theme="slate" title="Slate">
+            <span class="swatch-preview" style="background:#161920;border-color:rgba(200,220,255,.12)"></span>
+            <span class="swatch-label">Slate</span>
+          </button>
+          <button class="theme-swatch" data-theme="warmgray" title="Warm Gray">
+            <span class="swatch-preview" style="background:#1a1814;border-color:rgba(255,240,200,.1)"></span>
+            <span class="swatch-label">Warm Gray</span>
+          </button>
+          <button class="theme-swatch" data-theme="pureblack" title="Pure Black">
+            <span class="swatch-preview" style="background:#000;border-color:rgba(255,255,255,.06)"></span>
+            <span class="swatch-label">Pure Black</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h2 class="section-title">Accent Color</h2>
+        <div class="accent-grid">
+          <button class="accent-swatch" data-accent="blue"    style="background:#0a84ff" title="Blue"   aria-label="Blue"></button>
+          <button class="accent-swatch" data-accent="purple"  style="background:#bf5af2" title="Purple" aria-label="Purple"></button>
+          <button class="accent-swatch" data-accent="green"   style="background:#30d158" title="Green"  aria-label="Green"></button>
+          <button class="accent-swatch" data-accent="orange"  style="background:#ff9f0a" title="Orange" aria-label="Orange"></button>
+          <button class="accent-swatch" data-accent="pink"    style="background:#ff375f" title="Pink"   aria-label="Pink"></button>
+          <button class="accent-swatch" data-accent="neutral" style="background:#888"   title="Neutral" aria-label="Neutral"></button>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h2 class="section-title">Weather</h2>
+        <div class="toggle-row">
+          <div class="toggle-text">
+            <span class="toggle-label">Show weather widget</span>
+            <span class="toggle-desc">Displays temperature and city on the new tab page. Requires location permission from the browser.</span>
+          </div>
+          <label class="toggle-wrap" title="Show weather widget">
+            <input type="checkbox" id="toggle-weather" class="toggle-input">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h2 class="section-title">Interface</h2>
+        <div class="toggle-row">
+          <div class="toggle-text">
+            <span class="toggle-label">Show keyboard hints</span>
+          </div>
+          <label class="toggle-wrap">
+            <input type="checkbox" id="toggle-hints" class="toggle-input">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-text">
+            <span class="toggle-label">Show most visited shortcuts</span>
+            <span class="toggle-desc">The 6 tiles below the search bar sort by how often you open each shortcut.</span>
+          </div>
+          <label class="toggle-wrap">
+            <input type="checkbox" id="toggle-mostvisited" class="toggle-input">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+      </section>
+
+    </div><!-- /tab-appearance -->
+
+    <!-- ── Tab: Bookmarks ─────────────────────────────────────────── -->
+    <div id="tab-bookmarks" class="tab-panel" role="tabpanel">
+
+      <section class="settings-section">
+        <h2 class="section-title">Chrome Bookmarks</h2>
+        <div class="toggle-row">
+          <div class="toggle-text">
+            <span class="toggle-label">Include bookmarks in search</span>
+            <span class="toggle-desc">When enabled, your Chrome bookmarks appear in search results. Type <code class="inline-code">b query</code> to search bookmarks only.</span>
+          </div>
+          <label class="toggle-wrap">
+            <input type="checkbox" id="toggle-bookmarks" class="toggle-input">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <div id="bookmark-permission-status" class="permission-status" hidden></div>
+      </section>
+
+      <section class="settings-section">
+        <h2 class="section-title">Usage Data</h2>
+        <p class="section-desc">LaunchTab tracks how often you open each shortcut locally to sort the most-visited tiles. No data leaves your device.</p>
+        <button id="btn-reset-usage" class="btn btn-ghost">Reset usage data</button>
+      </section>
+
+    </div><!-- /tab-bookmarks -->
 
     <div id="status-banner" class="status-banner" hidden></div>
 
-  </div>
+  </div><!-- /page -->
 
   <script src="defaults.js"></script>
   <script src="storage.js"></script>
+  <script src="search-engines.js"></script>
+  <script src="bookmarks.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

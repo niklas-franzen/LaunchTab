@@ -1,8 +1,13 @@
 /* ─── script.js ─────────────────────────────────────────────────────────────
  *
  * Requires (loaded before this file in app.html):
- *   defaults.js  — DEFAULT_SHORTCUTS constant
- *   storage.js   — getDomain, createFaviconUrl, getShortcuts, normalizeUrl
+ *   themes.js          — applyTheme()
+ *   defaults.js        — DEFAULT_SHORTCUTS
+ *   storage.js         — getDomain, createFaviconUrl, getShortcuts,
+ *                        getAppearance, getUsageData, incrementUsage
+ *   search-engines.js  — getSearchEngines, matchSearchEngine
+ *   weather.js         — initWeather
+ *   bookmarks.js       — searchBookmarks
  *
  * ─────────────────────────────────────────────────────────────────────────── */
 
@@ -11,9 +16,12 @@ const DEFAULT_GRID_COUNT = 6;
 
 /* ─── State ──────────────────────────────────────────────────────────────── */
 
-let SHORTCUTS      = [];   // populated asynchronously from chrome.storage.local
-let activeIndex    = -1;
-let currentResults = [];
+let SHORTCUTS       = [];
+let SEARCH_ENGINES  = [];
+let APPEARANCE      = { theme: "graphite", accent: "blue", showWeather: false,
+                        showHints: true, showMostVisited: true, showBookmarks: false };
+let activeIndex     = -1;
+let currentResults  = [];
 
 /* ─── DOM References ─────────────────────────────────────────────────────── */
 
@@ -25,13 +33,13 @@ const defaultGrid      = document.getElementById("default-grid");
 const clearBtn         = document.getElementById("search-clear");
 const timeEl           = document.getElementById("time");
 const dateEl           = document.getElementById("date");
+const hintsEl          = document.getElementById("kbd-hints");
 
 /* ─── Focus Management ───────────────────────────────────────────────────────
  *
- * Chrome overrides autofocus on new-tab pages by refocusing the omnibox
- * after the page loads. We make multiple attempts over ~300 ms to win
- * that race. The app is loaded via a redirect from newtab.html → app.html?x
- * which already avoids most of Chrome's new-tab focus logic.
+ * Multiple attempts to win the focus race against Chrome's omnibox.
+ * app.html is loaded via a redirect from newtab.html → app.html?x which
+ * already avoids most of Chrome's new-tab focus logic.
  *
  * ─────────────────────────────────────────────────────────────────────────── */
 
@@ -63,7 +71,7 @@ document.addEventListener("click", (e) => {
   if (!hit) focusSearch();
 });
 
-// Any printable key typed outside the search input → route to search
+// Any printable key typed outside the search → route to search
 document.addEventListener("keydown", (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (document.activeElement === searchInput) return;
@@ -116,15 +124,14 @@ function highlightSubstring(text, query) {
  *
  * Scoring tiers (higher = better match):
  *
- *  10 000  Exact key match         "gh"     → GitHub
- *   9 500  Exact name match        "github" → GitHub
- *   9 200  Exact domain match      "github.com" → GitHub
- *   8 000  Name starts-with        "git"    → GitHub
- *   7 500  Domain starts-with      "git"    → github.com
- *   7 000  Key starts-with         "g"      → still typing key, e.g. "g" → Google
- *   6 500  Query starts-with key   "gmail"  → key "gm" is a prefix (multi-char keys only)
- *            Single-char keys (like "g") are excluded from this tier to prevent
- *            "github" from scoring Google highly just because "g" is a prefix.
+ *  10 000  Exact key match             "gh"     → GitHub
+ *   9 500  Exact name match            "github" → GitHub
+ *   9 200  Exact domain match          "github.com"
+ *   8 000  Name starts-with            "git"    → GitHub
+ *   7 500  Domain starts-with
+ *   7 000  Key starts-with (user still typing key, e.g. "g" → "gh")
+ *   6 500  Query starts-with key — only multi-char keys (≥2 chars)
+ *            Prevents single-char key "g" from hijacking "github" search
  *   5 000  Name contains
  *   4 500  Domain contains
  *   3 500  Category starts-with
@@ -141,38 +148,28 @@ function scoreShortcut(query, shortcut) {
   const q  = query.toLowerCase().trim();
   const fk = shortcut.key.toLowerCase();
   const fn = shortcut.name.toLowerCase();
-  const fc = shortcut.category.toLowerCase();
-  const fd = getDomain(shortcut.url).toLowerCase();  // getDomain from storage.js
+  const fc = (shortcut.category || "").toLowerCase();
+  const fd = getDomain(shortcut.url).toLowerCase();
   const fu = shortcut.url.toLowerCase();
 
-  // Tier 1 — exact matches
   if (fk === q) return 10000;
   if (fn === q) return 9500;
   if (fd === q) return 9200;
 
-  // Tier 2 — starts-with on name/domain (most useful for natural search)
   if (fn.startsWith(q)) return 8000 + Math.max(0, 50 - fn.length);
   if (fd.startsWith(q)) return 7500 + Math.max(0, 50 - fd.length);
 
-  // Tier 3 — key prefix logic
-  // 3a: user is still typing the key ("g" when key is "gh")
   if (fk.startsWith(q) && q.length < fk.length) return 7000 - fk.length;
-  // 3b: user typed past a multi-char key ("gmail" starts with key "gm")
-  //     Excluded for single-char keys: "g" must NOT pull Google up for "github"
   if (q.startsWith(fk) && fk.length >= 2) return 6500 - q.length;
 
-  // Tier 4 — substring contains
   if (fn.includes(q)) return 5000 + Math.max(0, 50 - fn.indexOf(q));
   if (fd.includes(q)) return 4500 + Math.max(0, 50 - fd.indexOf(q));
 
-  // Tier 5 — category
   if (fc.startsWith(q)) return 3500 - fc.length;
   if (fc.includes(q))   return 3000;
 
-  // Tier 6 — raw URL
   if (fu.includes(q)) return 2500;
 
-  // Tier 7 — fuzzy (lowest priority)
   const fzName = fuzzyMatch(q, fn);
   if (fzName   > 0) return 2000 + fzName;
   const fzDom  = fuzzyMatch(q, fd);
@@ -208,6 +205,20 @@ function search(query) {
     .map(({ shortcut }) => shortcut);
 }
 
+/* ─── Search / Bookmark Fallback Results ─────────────────────────────────── */
+
+function createFallbackSearchResult(query) {
+  const q = query.trim();
+  return {
+    type:     "search",
+    name:     "Search Google",
+    query:    q,
+    url:      q ? `https://www.google.com/search?q=${encodeURIComponent(q)}` : "",
+    category: "Search",
+    icon:     "https://www.google.com",
+  };
+}
+
 /* ─── Icons ──────────────────────────────────────────────────────────────── */
 
 function buildIconElement(shortcut, wrapperClass) {
@@ -217,7 +228,6 @@ function buildIconElement(shortcut, wrapperClass) {
 
   const { icon, name, url } = shortcut;
 
-  // Emoji: short string, not a URL and not a path
   if (icon && !icon.startsWith("http") && !icon.startsWith("/") && !icon.includes(".")) {
     const emoji = document.createElement("span");
     emoji.className = "icon-emoji";
@@ -228,14 +238,14 @@ function buildIconElement(shortcut, wrapperClass) {
 
   const img      = document.createElement("img");
   img.className  = "icon-img";
-  img.src        = icon || createFaviconUrl(url);  // createFaviconUrl from storage.js
+  img.src        = icon || createFaviconUrl(url);
   img.alt        = "";
   img.width      = 22;
   img.height     = 22;
 
   const fallback = document.createElement("span");
   fallback.className   = "icon-fallback";
-  fallback.textContent = name.charAt(0).toUpperCase();
+  fallback.textContent = (name || "?").charAt(0).toUpperCase();
 
   img.addEventListener("error", () => {
     img.style.display      = "none";
@@ -247,44 +257,25 @@ function buildIconElement(shortcut, wrapperClass) {
   return wrapper;
 }
 
-/* ─── Google Search Fallback ─────────────────────────────────────────────────
- *
- * Creates a synthetic result object representing a Google web search.
- * Used in two cases:
- *   A) No shortcuts matched the query → show Google search as the only result
- *   B) User typed "g " prefix → force Google search for the remainder
- *
- * Empty query → url is "" so openActive() skips navigation.
- *
- * ─────────────────────────────────────────────────────────────────────────── */
-
-function createGoogleSearchResult(query) {
-  const q   = query.trim();
-  const url = q ? `https://www.google.com/search?q=${encodeURIComponent(q)}` : "";
-  return { type: "search", name: "Search Google", query: q, url, category: "Search" };
-}
-
 /* ─── Render: Result Item ────────────────────────────────────────────────── */
 
-function createResultItem(shortcut, index, query) {
+function createResultItem(item, index, query) {
   const li = document.createElement("li");
   li.className = "result-item";
   li.setAttribute("role", "option");
   li.setAttribute("aria-selected", "false");
   li.style.setProperty("--item-index", index);
 
-  if (shortcut.type === "search") {
-    // ── Google search fallback item
-    li.appendChild(buildIconElement(
-      { url: "https://www.google.com", name: "Google" }, "result-icon"
-    ));
+  if (item.type === "search") {
+    // ── Search engine result (engine prefix or Google fallback)
+    const iconSrc = item.icon || "https://www.google.com";
+    li.appendChild(buildIconElement({ url: iconSrc, name: item.name }, "result-icon"));
 
     const searchKey = document.createElement("span");
     searchKey.className = "result-key result-key--search";
     searchKey.setAttribute("aria-hidden", "true");
-    // Magnifying-glass glyph — same stroke style as the rest of the UI
     searchKey.innerHTML =
-      `<svg viewBox="0 0 14 14" fill="none" width="12" height="12" aria-hidden="true">` +
+      `<svg viewBox="0 0 14 14" fill="none" width="12" height="12">` +
       `<circle cx="5.5" cy="5.5" r="4" stroke="currentColor" stroke-width="1.5"/>` +
       `<path d="M9 9l2.5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>` +
       `</svg>`;
@@ -294,10 +285,10 @@ function createResultItem(shortcut, index, query) {
     mainSpan.className = "result-main";
     const nameSpan   = document.createElement("span");
     nameSpan.className   = "result-name";
-    nameSpan.textContent = "Search Google";
+    nameSpan.textContent = item.name;
     const subSpan    = document.createElement("span");
     subSpan.className   = "result-domain";
-    subSpan.textContent = shortcut.query ? `for "${shortcut.query}"` : "Type to search…";
+    subSpan.textContent = item.query ? `for "${item.query}"` : "Type to search…";
     mainSpan.append(nameSpan, subSpan);
     li.appendChild(mainSpan);
 
@@ -306,37 +297,72 @@ function createResultItem(shortcut, index, query) {
     catSpan.textContent = "Search";
     li.appendChild(catSpan);
 
-    if (shortcut.url) li.addEventListener("click", () => navigateTo(shortcut.url));
+    if (item.url) li.addEventListener("click", () => navigateTo(item.url));
     li.addEventListener("mouseenter", () => setActiveIndex(index));
     return li;
   }
 
-  // ── Regular shortcut item
-  li.appendChild(buildIconElement(shortcut, "result-icon"));
+  if (item.type === "bookmark") {
+    // ── Chrome Bookmark result
+    li.appendChild(buildIconElement({ url: item.url, name: item.name }, "result-icon"));
+
+    const bmKey = document.createElement("span");
+    bmKey.className = "result-key result-key--search";
+    bmKey.setAttribute("aria-hidden", "true");
+    bmKey.innerHTML =
+      `<svg viewBox="0 0 14 14" fill="none" width="12" height="12">` +
+      `<path d="M3 1h8a1 1 0 0 1 1 1v10l-4.5-2.5L3 12V2a1 1 0 0 1 1-1z"` +
+      ` stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>` +
+      `</svg>`;
+    li.appendChild(bmKey);
+
+    const mainSpan   = document.createElement("span");
+    mainSpan.className = "result-main";
+    const nameSpan   = document.createElement("span");
+    nameSpan.className = "result-name";
+    nameSpan.innerHTML = highlightSubstring(item.name, query);
+    const domainSpan = document.createElement("span");
+    domainSpan.className   = "result-domain";
+    domainSpan.textContent = getDomain(item.url);
+    mainSpan.append(nameSpan, domainSpan);
+    li.appendChild(mainSpan);
+
+    const catSpan = document.createElement("span");
+    catSpan.className   = "result-category";
+    catSpan.textContent = "Bookmark";
+    li.appendChild(catSpan);
+
+    li.addEventListener("click", () => navigateTo(item.url));
+    li.addEventListener("mouseenter", () => setActiveIndex(index));
+    return li;
+  }
+
+  // ── Regular shortcut
+  li.appendChild(buildIconElement(item, "result-icon"));
 
   const keySpan = document.createElement("span");
   keySpan.className = "result-key";
-  keySpan.setAttribute("aria-label", `Shortcut: ${shortcut.key}`);
-  keySpan.innerHTML = highlightSubstring(shortcut.key, query);
+  keySpan.setAttribute("aria-label", `Shortcut: ${item.key}`);
+  keySpan.innerHTML = highlightSubstring(item.key, query);
   li.appendChild(keySpan);
 
   const mainSpan    = document.createElement("span");
   mainSpan.className = "result-main";
   const nameSpan    = document.createElement("span");
   nameSpan.className = "result-name";
-  nameSpan.innerHTML = highlightSubstring(shortcut.name, query);
+  nameSpan.innerHTML = highlightSubstring(item.name, query);
   const domainSpan  = document.createElement("span");
   domainSpan.className   = "result-domain";
-  domainSpan.textContent = getDomain(shortcut.url);
+  domainSpan.textContent = getDomain(item.url);
   mainSpan.append(nameSpan, domainSpan);
   li.appendChild(mainSpan);
 
   const catSpan = document.createElement("span");
   catSpan.className   = "result-category";
-  catSpan.textContent = shortcut.category;
+  catSpan.textContent = item.category;
   li.appendChild(catSpan);
 
-  li.addEventListener("click",      () => navigateTo(shortcut.url));
+  li.addEventListener("click",      () => navigateTo(item.url));
   li.addEventListener("mouseenter", () => setActiveIndex(index));
   return li;
 }
@@ -353,40 +379,50 @@ function renderResults(items, query) {
   }
 
   noResults.hidden = true;
-  items.forEach((shortcut, i) => {
-    resultsList.appendChild(createResultItem(shortcut, i, query));
+  items.forEach((item, i) => {
+    resultsList.appendChild(createResultItem(item, i, query));
   });
 
   searchInput.setAttribute("aria-expanded", "true");
-  setActiveIndex(0);  // first result pre-selected
+  setActiveIndex(0);
 }
 
-/* ─── Render: Default Grid ───────────────────────────────────────────────── */
+/* ─── Render: Default Grid (most visited) ────────────────────────────────── */
 
 function renderDefaultGrid() {
   defaultGrid.innerHTML = "";
-  SHORTCUTS.slice(0, DEFAULT_GRID_COUNT).forEach((shortcut, i) => {
-    const card = document.createElement("button");
-    card.className = "grid-card";
-    card.style.setProperty("--item-index", i);
-    card.setAttribute("aria-label", `${shortcut.name} — ${getDomain(shortcut.url)}`);
-    card.type = "button";
+  if (!APPEARANCE.showMostVisited && SHORTCUTS.length === 0) return;
 
-    card.appendChild(buildIconElement(shortcut, "grid-card-icon"));
+  getUsageData().then(usage => {
+    // Sort shortcuts by usage count (desc); ties keep original order
+    const sorted = [...SHORTCUTS].sort((a, b) =>
+      (usage[b.key] || 0) - (usage[a.key] || 0)
+    );
+    const items = sorted.slice(0, DEFAULT_GRID_COUNT);
 
-    const keySpan       = document.createElement("span");
-    keySpan.className   = "grid-card-key";
-    keySpan.textContent = shortcut.key;
-    const nameSpan       = document.createElement("span");
-    nameSpan.className   = "grid-card-name";
-    nameSpan.textContent = shortcut.name;
-    const catSpan        = document.createElement("span");
-    catSpan.className    = "grid-card-category";
-    catSpan.textContent  = shortcut.category;
+    items.forEach((shortcut, i) => {
+      const card = document.createElement("button");
+      card.className = "grid-card";
+      card.style.setProperty("--item-index", i);
+      card.setAttribute("aria-label", `${shortcut.name} — ${getDomain(shortcut.url)}`);
+      card.type = "button";
 
-    card.append(keySpan, nameSpan, catSpan);
-    card.addEventListener("click", () => navigateTo(shortcut.url));
-    defaultGrid.appendChild(card);
+      card.appendChild(buildIconElement(shortcut, "grid-card-icon"));
+
+      const keySpan       = document.createElement("span");
+      keySpan.className   = "grid-card-key";
+      keySpan.textContent = shortcut.key;
+      const nameSpan       = document.createElement("span");
+      nameSpan.className   = "grid-card-name";
+      nameSpan.textContent = shortcut.name;
+      const catSpan        = document.createElement("span");
+      catSpan.className    = "grid-card-category";
+      catSpan.textContent  = shortcut.category;
+
+      card.append(keySpan, nameSpan, catSpan);
+      card.addEventListener("click", () => navigateTo(shortcut.url));
+      defaultGrid.appendChild(card);
+    });
   });
 }
 
@@ -420,16 +456,19 @@ function setActiveIndex(index) {
   items[index].scrollIntoView({ block: "nearest", behavior: "smooth" });
 }
 
-function navigateTo(url) { window.location.href = url; }
+function navigateTo(url) {
+  // Track usage for shortcut opens
+  const sc = SHORTCUTS.find(s => s.url === url);
+  if (sc) incrementUsage(sc.key);
+  window.location.href = url;
+}
 
 function openActive() {
-  // Guard: search fallback with empty query (user typed "g " with nothing after)
-  // has url === "" — skip navigation in that case.
   const pick = activeIndex >= 0 ? currentResults[activeIndex] : currentResults[0];
   if (pick && pick.url) navigateTo(pick.url);
 }
 
-/* ─── Events ─────────────────────────────────────────────────────────────── */
+/* ─── Event: Search Input ────────────────────────────────────────────────── */
 
 searchInput.addEventListener("input", () => {
   const raw = searchInput.value;
@@ -437,23 +476,61 @@ searchInput.addEventListener("input", () => {
 
   if (!raw.trim()) { showDefaultGrid(); return; }
 
-  // "g " prefix (lowercase g + space) → force Google search for the remainder.
-  // "g" alone still opens the Google shortcut via normal scoring.
-  if (/^g\s/.test(raw)) {
+  // 1. Bookmark prefix: "b [query]"
+  if (/^b\s/.test(raw) && APPEARANCE.showBookmarks) {
     const q = raw.slice(2).trim();
-    showResults([createGoogleSearchResult(q)], "");
+    if (q) {
+      searchBookmarks(q).then(bmarks => {
+        if (bmarks.length > 0) {
+          showResults(bmarks.slice(0, MAX_RESULTS), q);
+        } else {
+          showResults([createFallbackSearchResult(q)], q);
+        }
+      });
+    } else {
+      showResults([createFallbackSearchResult("")], "");
+    }
     return;
   }
 
+  // 2. Search engine prefix: "[engine-key] [query]"  (e.g. "yt deadlift")
+  const seResult = matchSearchEngine(raw, SEARCH_ENGINES);
+  if (seResult) {
+    showResults([seResult], "");
+    return;
+  }
+
+  // 3. Normal shortcut fuzzy search
   const results = search(raw);
+
   if (results.length === 0) {
-    // No shortcuts matched → show Google search as the single fallback result
-    showResults([createGoogleSearchResult(raw)], raw);
+    // No shortcuts matched — try bookmarks, then fall back to Google
+    if (APPEARANCE.showBookmarks) {
+      searchBookmarks(raw).then(bmarks => {
+        if (bmarks.length > 0) {
+          showResults(bmarks.slice(0, MAX_RESULTS), raw);
+        } else {
+          showResults([createFallbackSearchResult(raw)], raw);
+        }
+      });
+    } else {
+      showResults([createFallbackSearchResult(raw)], raw);
+    }
     return;
   }
 
-  showResults(results, raw);
+  // Mix in bookmarks if enabled and query is specific enough (≥3 chars)
+  if (APPEARANCE.showBookmarks && raw.length >= 3) {
+    searchBookmarks(raw).then(bmarks => {
+      const merged = [...results, ...bmarks.slice(0, 2)].slice(0, MAX_RESULTS);
+      showResults(merged, raw);
+    });
+  } else {
+    showResults(results, raw);
+  }
 });
+
+/* ─── Event: Keyboard ────────────────────────────────────────────────────── */
 
 searchInput.addEventListener("keydown", (e) => {
   switch (e.key) {
@@ -510,8 +587,26 @@ document.getElementById("settings-btn").addEventListener("click", () => {
 updateClock();
 setInterval(updateClock, 60_000);
 
-// Load shortcuts from storage, then render the grid
-getShortcuts().then(shortcuts => {
-  SHORTCUTS = shortcuts;
+Promise.all([
+  getShortcuts(),
+  getSearchEngines(),
+  getAppearance(),
+]).then(([shortcuts, engines, appearance]) => {
+  SHORTCUTS      = shortcuts;
+  SEARCH_ENGINES = engines;
+  APPEARANCE     = appearance;
+
+  // Confirm/reapply theme from storage (localStorage mirror already applied in themes.js)
+  applyTheme(appearance.theme, appearance.accent);
+
+  // Apply UI visibility settings
+  if (hintsEl) hintsEl.hidden = !appearance.showHints;
+
+  // Most-visited grid
   renderDefaultGrid();
+
+  // Weather widget
+  if (appearance.showWeather) {
+    initWeather(document.getElementById("weather-widget"));
+  }
 });

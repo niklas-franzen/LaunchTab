@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LaunchTab</title>
+  <!-- themes.js first: applies saved theme from localStorage before first paint (no FOUC) -->
+  <script src="themes.js"></script>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -12,6 +14,8 @@
   <aside class="clock-widget" aria-label="Current time and date">
     <time id="time" class="clock-time" datetime=""></time>
     <time id="date" class="clock-date" datetime=""></time>
+    <!-- Weather widget — rendered here; hidden until data loads -->
+    <div id="weather-widget" class="weather-widget" hidden aria-live="polite"></div>
   </aside>
 
   <!-- Central launcher -->
@@ -32,7 +36,7 @@
         id="search"
         class="search-input"
         type="text"
-        placeholder="Type a shortcut or name…"
+        placeholder="Type a shortcut, name, or search…"
         autocomplete="off"
         autocorrect="off"
         autocapitalize="off"
@@ -74,16 +78,8 @@
 
   </main>
 
-  <!--
-    Keyboard hints live OUTSIDE <main class="launcher"> intentionally.
-    The launcher uses transform: translateX(-50%) for centering, which creates
-    a new stacking/containing context. A position:fixed child inside a
-    transformed parent is anchored to that parent — not the viewport — causing
-    the hints to scroll with the content. By placing the footer here as a
-    direct child of <body> (which has no transform), position:fixed works
-    correctly and the hints stay locked to the bottom of the viewport.
-  -->
-  <footer class="kbd-hints" role="contentinfo" aria-label="Keyboard navigation hints">
+  <!-- Keyboard hints — outside .launcher (which has transform) so position:fixed works -->
+  <footer class="kbd-hints" id="kbd-hints" role="contentinfo" aria-label="Keyboard navigation hints">
     <span><kbd>Enter</kbd> open</span>
     <span class="hints-sep" aria-hidden="true">·</span>
     <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
@@ -91,7 +87,7 @@
     <span><kbd>Esc</kbd> clear</span>
   </footer>
 
-  <!-- Settings button — fixed bottom-right, positioned alongside the kbd-hints -->
+  <!-- Settings gear button — fixed bottom-right -->
   <button id="settings-btn" class="settings-btn" title="Settings" aria-label="Open Settings">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -102,6 +98,9 @@
 
   <script src="defaults.js"></script>
   <script src="storage.js"></script>
+  <script src="search-engines.js"></script>
+  <script src="weather.js"></script>
+  <script src="bookmarks.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

@@ -3,10 +3,13 @@
  * Handles the toolbar popup: reads the active tab URL/title, pre-fills the
  * form, validates input, and saves the new shortcut via storage.js.
  *
- * Requires defaults.js + storage.js to be loaded first.
+ * Requires themes.js + defaults.js + storage.js to be loaded first.
  * Uses activeTab permission to access the current tab's URL and title.
  *
  * ─────────────────────────────────────────────────────────────────────────── */
+
+// Apply saved theme so the popup matches the user's selected appearance
+getAppearance().then(ap => applyTheme(ap.theme, ap.accent)).catch(() => {});
 
 /* ─── DOM refs ───────────────────────────────────────────────────────────── */
 

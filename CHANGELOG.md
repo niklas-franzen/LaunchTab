@@ -1,67 +1,79 @@
 # Changelog
 
 All notable changes are documented here.
-Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+---
+
+## [0.4.0] — 2025
+
+### Added
+- **Font size setting** (Small / Medium / Large) via `--font-scale` CSS variable; applied instantly alongside theme/accent with no FOUC
+- **Show/hide toggles** for clock, date, weather, keyboard hints, most-visited tiles, visit counts, settings button — full "minimal mode" support
+- **Visit count badges** on most-visited grid tiles (optional; `showVisitCounts`)
+- **Temperature unit selector** (°C / °F) in Appearance; Open-Meteo API natively supports both so no client-side conversion needed; cache invalidated on unit change
+- **JSON Export** — full data download (shortcuts, search engines, appearance)
+- **JSON Import** — with validation, replace-or-merge choice, and duplicate-key warnings
+- **Data tab** in Settings — Import / Export / Reset usage / Reset appearance
+- **About tab** in Settings — version, GitHub link, Privacy link, Buy Me a Coffee
+- **Restore default theme** button in Appearance
+- **URL duplicate detection** in Add/Edit shortcut form (normalises trailing slash, case) — warns and asks for confirmation before proceeding
+- **URL duplicate check** in the toolbar popup as well
+- **Keyboard navigation in shortcut list** — ArrowUp/Down to highlight items, Enter to open edit form, Escape to deselect, A to open Add form (when no input is focused)
+- **Cmd/Ctrl+S** saves the active form from anywhere on the settings page
+- Settings list now annotated with `data-key` for robust keyboard targeting
+
+### Changed
+- `themes.js` — added `applyFontSize()` + `FONT_SCALES`; IIFE now applies font size alongside theme on every page load
+- `storage.js` — `DEFAULT_APPEARANCE` extended with `fontSize`, `showTime`, `showDate`, `tempUnit`, `showVisitCounts`, `showSettingsBtn`
+- `weather.js` — temperature unit passed to API (`temperature_unit` param); cache is unit-aware
+- `script.js` — `renderDefaultGrid` supports `showMostVisited` toggle and optional visit-count badges; init applies all new appearance fields
+- `styles.css` — `--font-scale` variable; greeting and search input use `calc()`; `.grid-card-count` and `.keyboard-focused` added
+- `options.html/css/js` — two new tabs (Data, About); Appearance tab extended; keyboard navigation; Cmd+S; URL dup check; import/export
+- `popup.js` — URL duplicate warning on "Add to LaunchTab"
+- `manifest.json` — version `0.4.0`
+
+### Docs
+- `README.md` — icon generation instructions (`sips` / ImageMagick), all new features, Buy Me a Coffee section
+- `PRIVACY.md` — import/export section, visit-count tracking note, Buy Me a Coffee note
 
 ---
 
 ## [0.3.0] — 2025
 
 ### Added
-- **Themes** — Graphite, Midnight, Slate, Warm Gray, Pure Black; applied instantly via CSS custom properties with no flash on load (localStorage mirror)
-- **Accent colors** — Blue, Purple, Green, Orange, Pink, Neutral
-- **Weather widget** — minimal temperature + city display using Open-Meteo and Nominatim (both free, no API key); cached 30 min in chrome.storage.local
-- **Search engine prefixes** — `yt deadlift`, `wiki thermodynamik`, `maps essen`, `gh launchtab`, `so javascript map`, and 10+ more defaults; fully manageable in Settings
-- **Chrome Bookmarks integration** — optional; `b query` prefix for bookmark-only search; uses `optional_permissions` so the permission is only requested when the user enables the feature
-- **Most visited tiles** — default grid now sorts by local usage count (no numbers shown); usage tracked per shortcut on each open
-- **Settings tabs** — options page restructured into four tabs: Shortcuts / Search / Appearance / Bookmarks
-- **Back to LaunchTab** button in the settings header
-- **Usage data reset** button in Settings → Bookmarks
-- `themes.js` — new shared theme/accent utility loaded before first paint
-- `search-engines.js` — search engine definitions and prefix matching
-- `weather.js` — weather fetching with caching
-- `bookmarks.js` — bookmark search and optional permission helpers
-
-### Changed
-- `storage.js` — added `getAppearance`, `saveAppearance`, `getUsageData`, `incrementUsage`, `resetUsageData`
-- `script.js` — extended input handler for search engine prefixes, bookmark prefix (`b `), usage tracking, appearance-driven UI (hints visibility, most-visited grid, weather)
-- `manifest.json` — version `0.3.0`; added `optional_permissions: ["bookmarks"]`
-- `app.html` — loads new utility scripts; weather widget container added
-- `popup.html/js` — theme applied on load for visual consistency
-
-### Fixed
-- `position: fixed` on keyboard hints now works correctly after moving the element outside the `transform`-ed launcher container
+- Themes (Graphite, Midnight, Slate, Warm Gray, Pure Black) with no-FOUC localStorage mirror
+- Accent colors (Blue, Purple, Green, Orange, Pink, Neutral)
+- Weather widget using Open-Meteo + Nominatim (no API key)
+- Search engine prefix system (14 defaults; fully manageable)
+- Chrome Bookmarks integration (`optional_permissions`)
+- Most-visited tiles (sorted by local usage count)
+- Options page restructured with 4 tabs; Back-to-LaunchTab button
+- `themes.js`, `search-engines.js`, `weather.js`, `bookmarks.js`
+- `storage.js` — appearance settings, usage tracking
 
 ---
 
 ## [0.2.0] — 2025
 
 ### Added
-- `chrome.storage.local` for persistent shortcuts (replacing hard-coded array)
-- `defaults.js` — factory default shortcuts
-- `storage.js` — shared CRUD utilities
-- Options page (Settings) — add, edit, delete, filter shortcuts; reset to defaults
-- Toolbar popup — add current page to LaunchTab with one click
-- Google fallback search — shows "Search Google" when no shortcuts match
-- `g query` bang — type `g tee` to Google-search "tee" directly
+- `chrome.storage.local` for persistent shortcuts
+- Options page and toolbar popup
+- Google fallback search + `g query` bang
 - Settings gear icon on new tab page
-- `optional_permissions: ["bookmarks"]` groundwork
-
-### Changed
-- `manifest.json` — `action`, `options_page`, `permissions: ["storage", "activeTab"]`
-- Ranking improved — single-char keys no longer hijack longer queries
+- Improved ranking — single-char keys no longer hijack longer queries
 
 ---
 
 ## [0.1.0] — 2025
 
 ### Added
-- New-tab override with redirect (`newtab.html` → `app.html?x`) for reliable autofocus
+- New-tab override with redirect for reliable autofocus
 - Fuzzy search with multi-tier ranking
-- Result list with Google favicons and fallback letters
+- Result list with favicons and letter fallbacks
 - First result auto-selected; Enter opens immediately
-- Keyboard navigation (↑↓ Enter Escape ⌘K)
+- Arrow keys, Escape, ⌘K
 - Fixed keyboard hints bar
 - Clock + date widget
-- Dark, Apple-inspired design with CSS custom properties
-- CSP-compliant structure — no inline scripts or event handlers
+- Dark, Apple-inspired design
+- CSP-compliant — no inline scripts

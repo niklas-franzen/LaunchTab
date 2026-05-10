@@ -90,12 +90,32 @@ function handleAdd() {
   try { new URL(url); }
   catch { showError("Enter a valid URL."); pUrl.focus(); return; }
 
-  const duplicate = existingShortcuts.find(s => s.key === key);
-  if (duplicate) {
-    showError(`Key "${key}" is already used by "${duplicate.name}". Choose a different key.`);
+  // Key uniqueness
+  const keyDup = existingShortcuts.find(s => s.key === key);
+  if (keyDup) {
+    showError(`Key "${key}" is already used by "${keyDup.name}". Choose a different key.`);
     pKey.focus();
     return;
   }
+
+  // URL duplicate — warn but allow
+  function normUrl(u) {
+    try {
+      const x = new URL(u);
+      return `${x.protocol}//${x.hostname.toLowerCase()}${x.pathname.replace(/\/+$/, "") || "/"}${x.search}`;
+    } catch { return u.toLowerCase().replace(/\/+$/, ""); }
+  }
+  const urlDup = existingShortcuts.find(s => normUrl(s.url) === normUrl(url));
+  if (urlDup) {
+    showError(`This URL belongs to "${urlDup.name}" (key: ${urlDup.key}). Save anyway?`);
+    // Re-submit on second click clears the error and proceeds
+    btnAdd.dataset.urlWarn = "1";
+    if (btnAdd.dataset.urlWarn !== "2") {
+      btnAdd.dataset.urlWarn = "2";
+      return;
+    }
+  }
+  btnAdd.dataset.urlWarn = "";
 
   showError("");
 

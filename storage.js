@@ -90,12 +90,22 @@ function resetShortcuts() {
 const APPEARANCE_KEY = "launchtab_appearance";
 
 const DEFAULT_APPEARANCE = {
-  theme:          "graphite",
-  accent:         "blue",
-  showWeather:    false,
-  showHints:      true,
+  // Visual theme
+  theme:           "graphite",
+  accent:          "blue",
+  fontSize:        "medium",      // "small" | "medium" | "large"
+  // Clock & weather
+  showTime:        true,
+  showDate:        true,
+  showWeather:     false,
+  tempUnit:        "C",           // "C" | "F"
+  // Main-page UI
+  showHints:       true,
   showMostVisited: true,
-  showBookmarks:  false,
+  showVisitCounts: false,
+  showSettingsBtn: true,
+  // Bookmarks
+  showBookmarks:   false,
 };
 
 function getAppearance() {

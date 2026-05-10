@@ -103,9 +103,25 @@ function applyTheme(themeName, accentName) {
   } catch (_) { /* ignore if storage is blocked */ }
 }
 
-// Apply immediately from localStorage — zero async latency, no FOUC
-(function applyThemeFromLocalStorage() {
-  const t = localStorage.getItem("lt_theme")  || "graphite";
-  const a = localStorage.getItem("lt_accent") || "blue";
+/* ─── Font Size ──────────────────────────────────────────────────────────── */
+
+const FONT_SCALES = { small: "0.875", medium: "1", large: "1.125" };
+
+/**
+ * Sets --font-scale on the document root. Key UI elements in styles.css use
+ * calc(var(--font-scale) * Xpx) so a single variable controls the whole UI.
+ */
+function applyFontSize(size) {
+  const scale = FONT_SCALES[size] || "1";
+  document.documentElement.style.setProperty("--font-scale", scale);
+  try { localStorage.setItem("lt_fontsize", size); } catch (_) {}
+}
+
+// Apply all visual settings immediately from localStorage — no FOUC
+(function applyFromLocalStorage() {
+  const t = localStorage.getItem("lt_theme")   || "graphite";
+  const a = localStorage.getItem("lt_accent")  || "blue";
+  const s = localStorage.getItem("lt_fontsize") || "medium";
   applyTheme(t, a);
+  applyFontSize(s);
 }());

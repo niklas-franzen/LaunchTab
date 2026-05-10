@@ -11,8 +11,15 @@
  *
  * ─────────────────────────────────────────────────────────────────────────── */
 
-const MAX_RESULTS        = 7;
-const DEFAULT_GRID_COUNT = 6;
+/* MAX_RESULTS removed — the CSS max-height on .results-list is the only
+ * limit on how many rows are VISIBLE at once (~7 rows × 55 px ≈ 420 px).
+ * JavaScript keeps ALL matching results in currentResults so arrow-key
+ * navigation reaches every match, not just the first 7.
+ *
+ * Bookmarks are capped separately because chrome.bookmarks.search can
+ * return hundreds of entries. */
+const MAX_BOOKMARK_RESULTS = 20;
+const DEFAULT_GRID_COUNT   = 6;
 
 /* ─── State ──────────────────────────────────────────────────────────────── */
 
@@ -197,11 +204,12 @@ function fuzzyMatch(query, text) {
 
 function search(query) {
   if (!query.trim() || SHORTCUTS.length === 0) return [];
+  // No slice here — ALL matching shortcuts are returned.
+  // The CSS max-height on .results-list handles the visible 7-row limit.
   return SHORTCUTS
     .map(s => ({ shortcut: s, score: scoreShortcut(query, s) }))
     .filter(({ score }) => score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, MAX_RESULTS)
     .map(({ shortcut }) => shortcut);
 }
 
@@ -390,17 +398,19 @@ function renderResults(items, query) {
 /* ─── Render: Default Grid (most visited) ────────────────────────────────── */
 
 function renderDefaultGrid() {
+  // Hide grid entirely when feature is disabled
+  if (!APPEARANCE.showMostVisited) {
+    defaultGrid.classList.add("hidden");
+    return;
+  }
+  defaultGrid.classList.remove("hidden");
   defaultGrid.innerHTML = "";
-  if (!APPEARANCE.showMostVisited && SHORTCUTS.length === 0) return;
 
   getUsageData().then(usage => {
-    // Sort shortcuts by usage count (desc); ties keep original order
     const sorted = [...SHORTCUTS].sort((a, b) =>
       (usage[b.key] || 0) - (usage[a.key] || 0)
     );
-    const items = sorted.slice(0, DEFAULT_GRID_COUNT);
-
-    items.forEach((shortcut, i) => {
+    sorted.slice(0, DEFAULT_GRID_COUNT).forEach((shortcut, i) => {
       const card = document.createElement("button");
       card.className = "grid-card";
       card.style.setProperty("--item-index", i);
@@ -420,6 +430,16 @@ function renderDefaultGrid() {
       catSpan.textContent  = shortcut.category;
 
       card.append(keySpan, nameSpan, catSpan);
+
+      // Optional visit count badge
+      const count = usage[shortcut.key] || 0;
+      if (APPEARANCE.showVisitCounts && count > 0) {
+        const countEl       = document.createElement("span");
+        countEl.className   = "grid-card-count";
+        countEl.textContent = `${count}×`;
+        card.appendChild(countEl);
+      }
+
       card.addEventListener("click", () => navigateTo(shortcut.url));
       defaultGrid.appendChild(card);
     });
@@ -482,7 +502,8 @@ searchInput.addEventListener("input", () => {
     if (q) {
       searchBookmarks(q).then(bmarks => {
         if (bmarks.length > 0) {
-          showResults(bmarks.slice(0, MAX_RESULTS), q);
+          // Cap bookmarks at MAX_BOOKMARK_RESULTS to avoid rendering hundreds
+          showResults(bmarks.slice(0, MAX_BOOKMARK_RESULTS), q);
         } else {
           showResults([createFallbackSearchResult(q)], q);
         }
@@ -500,7 +521,7 @@ searchInput.addEventListener("input", () => {
     return;
   }
 
-  // 3. Normal shortcut fuzzy search
+  // 3. Normal shortcut fuzzy search — returns ALL matching shortcuts
   const results = search(raw);
 
   if (results.length === 0) {
@@ -508,7 +529,7 @@ searchInput.addEventListener("input", () => {
     if (APPEARANCE.showBookmarks) {
       searchBookmarks(raw).then(bmarks => {
         if (bmarks.length > 0) {
-          showResults(bmarks.slice(0, MAX_RESULTS), raw);
+          showResults(bmarks.slice(0, MAX_BOOKMARK_RESULTS), raw);
         } else {
           showResults([createFallbackSearchResult(raw)], raw);
         }
@@ -522,7 +543,8 @@ searchInput.addEventListener("input", () => {
   // Mix in bookmarks if enabled and query is specific enough (≥3 chars)
   if (APPEARANCE.showBookmarks && raw.length >= 3) {
     searchBookmarks(raw).then(bmarks => {
-      const merged = [...results, ...bmarks.slice(0, 2)].slice(0, MAX_RESULTS);
+      // Append a few bookmark results after all shortcut matches
+      const merged = [...results, ...bmarks.slice(0, 3)];
       showResults(merged, raw);
     });
   } else {
@@ -596,17 +618,32 @@ Promise.all([
   SEARCH_ENGINES = engines;
   APPEARANCE     = appearance;
 
-  // Confirm/reapply theme from storage (localStorage mirror already applied in themes.js)
+  // Confirm/reapply theme + font size from storage
+  // (localStorage mirror already applied in themes.js for instant no-FOUC,
+  //  but storage is authoritative in case the two diverge)
   applyTheme(appearance.theme, appearance.accent);
+  applyFontSize(appearance.fontSize);
 
-  // Apply UI visibility settings
+  // Clock / weather visibility
+  const clockEl = document.querySelector(".clock-widget");
+  if (clockEl) {
+    timeEl.hidden = !appearance.showTime;
+    dateEl.hidden = !appearance.showDate;
+    clockEl.hidden = !appearance.showTime && !appearance.showDate && !appearance.showWeather;
+  }
+
+  // Keyboard hints
   if (hintsEl) hintsEl.hidden = !appearance.showHints;
 
-  // Most-visited grid
+  // Settings gear button
+  const settingsBtnEl = document.getElementById("settings-btn");
+  if (settingsBtnEl) settingsBtnEl.hidden = !appearance.showSettingsBtn;
+
+  // Most-visited grid (sorted by usage, with optional visit counts)
   renderDefaultGrid();
 
-  // Weather widget
+  // Weather widget — only when enabled; passes unit so cache is unit-aware
   if (appearance.showWeather) {
-    initWeather(document.getElementById("weather-widget"));
+    initWeather(document.getElementById("weather-widget"), appearance.tempUnit || "C");
   }
 });

@@ -14,20 +14,23 @@
     <header class="page-header">
       <button id="btn-back" class="btn-back" title="Back to LaunchTab" aria-label="Back to LaunchTab">
         <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-          <path d="M12 4L5 10l7 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 4L5 10l7 6" stroke="currentColor" stroke-width="1.6"
+                stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         LaunchTab
       </button>
 
       <nav class="tab-nav" role="tablist">
         <button class="tab-btn active" data-tab="shortcuts" role="tab">Shortcuts</button>
-        <button class="tab-btn" data-tab="engines" role="tab">Search</button>
+        <button class="tab-btn" data-tab="engines"    role="tab">Search</button>
         <button class="tab-btn" data-tab="appearance" role="tab">Appearance</button>
-        <button class="tab-btn" data-tab="bookmarks" role="tab">Bookmarks</button>
+        <button class="tab-btn" data-tab="bookmarks"  role="tab">Bookmarks</button>
+        <button class="tab-btn" data-tab="data"       role="tab">Data</button>
+        <button class="tab-btn" data-tab="about"      role="tab">About</button>
       </nav>
     </header>
 
-    <!-- ── Tab: Shortcuts ─────────────────────────────────────────── -->
+    <!-- ── Tab: Shortcuts ──────────────────────────────────────────────── -->
     <div id="tab-shortcuts" class="tab-panel active" role="tabpanel">
 
       <div class="toolbar">
@@ -37,7 +40,23 @@
         <button id="btn-reset-shortcuts" class="btn btn-ghost btn-sm">Reset defaults</button>
       </div>
 
-      <div id="shortcut-list" class="shortcut-list" role="list"></div>
+      <div id="shortcut-list" class="shortcut-list" role="list"
+           aria-label="Shortcuts list — use arrow keys to navigate"></div>
+
+      <!-- Keyboard hints — same visual style as main-page hints -->
+      <div class="settings-kbd-hints" id="shortcuts-kbd-hints">
+        <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+        <span class="settings-hints-sep">·</span>
+        <span><kbd>Enter</kbd> edit</span>
+        <span class="settings-hints-sep">·</span>
+        <span><kbd>A</kbd> add</span>
+        <span class="settings-hints-sep">·</span>
+        <span><kbd>Del</kbd> remove</span>
+        <span class="settings-hints-sep">·</span>
+        <span><kbd>Esc</kbd> deselect</span>
+        <span class="settings-hints-sep">·</span>
+        <span><kbd>⌘S</kbd> save</span>
+      </div>
 
       <div id="form-card" class="form-card" hidden>
         <h2 id="form-title" class="form-card-title">Add shortcut</h2>
@@ -68,11 +87,12 @@
           <button id="btn-save" class="btn btn-primary">Save</button>
           <button id="btn-cancel" class="btn btn-ghost">Cancel</button>
         </div>
+        <p class="form-hint">Tip: <kbd>Cmd/Ctrl+S</kbd> saves the form.</p>
       </div>
 
     </div><!-- /tab-shortcuts -->
 
-    <!-- ── Tab: Search Engines ────────────────────────────────────── -->
+    <!-- ── Tab: Search Engines ────────────────────────────────────────── -->
     <div id="tab-engines" class="tab-panel" role="tabpanel">
 
       <div class="toolbar">
@@ -82,6 +102,20 @@
       </div>
 
       <div id="engine-list" class="shortcut-list" role="list"></div>
+
+      <div class="settings-kbd-hints" id="engines-kbd-hints">
+        <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+        <span class="settings-hints-sep">·</span>
+        <span><kbd>Enter</kbd> edit</span>
+        <span class="settings-hints-sep">·</span>
+        <span><kbd>A</kbd> add</span>
+        <span class="settings-hints-sep">·</span>
+        <span><kbd>Del</kbd> remove</span>
+        <span class="settings-hints-sep">·</span>
+        <span><kbd>Esc</kbd> deselect</span>
+        <span class="settings-hints-sep">·</span>
+        <span><kbd>⌘S</kbd> save</span>
+      </div>
 
       <div id="engine-form-card" class="form-card" hidden>
         <h2 id="engine-form-title" class="form-card-title">Add search engine</h2>
@@ -97,7 +131,9 @@
                    placeholder="e.g. YouTube" maxlength="60" autocomplete="off">
           </label>
           <label class="field-wrap field-wrap--full">
-            <span class="field-label">Search URL <span class="field-label-note">(use {query} as placeholder)</span></span>
+            <span class="field-label">Search URL
+              <span class="field-label-note">(use {query} as placeholder)</span>
+            </span>
             <input id="ef-url" type="text" class="field-input"
                    placeholder="https://example.com/search?q={query}"
                    autocomplete="off" spellcheck="false">
@@ -112,25 +148,25 @@
 
     </div><!-- /tab-engines -->
 
-    <!-- ── Tab: Appearance ────────────────────────────────────────── -->
+    <!-- ── Tab: Appearance ────────────────────────────────────────────── -->
     <div id="tab-appearance" class="tab-panel" role="tabpanel">
 
       <section class="settings-section">
         <h2 class="section-title">Theme</h2>
         <div class="theme-grid">
-          <button class="theme-swatch" data-theme="graphite" title="Graphite">
+          <button class="theme-swatch" data-theme="graphite"  title="Graphite">
             <span class="swatch-preview" style="background:#1c1c1e;border-color:rgba(255,255,255,.1)"></span>
             <span class="swatch-label">Graphite</span>
           </button>
-          <button class="theme-swatch" data-theme="midnight" title="Midnight">
+          <button class="theme-swatch" data-theme="midnight"  title="Midnight">
             <span class="swatch-preview" style="background:#0d0f1a;border-color:rgba(200,210,255,.15)"></span>
             <span class="swatch-label">Midnight</span>
           </button>
-          <button class="theme-swatch" data-theme="slate" title="Slate">
+          <button class="theme-swatch" data-theme="slate"     title="Slate">
             <span class="swatch-preview" style="background:#161920;border-color:rgba(200,220,255,.12)"></span>
             <span class="swatch-label">Slate</span>
           </button>
-          <button class="theme-swatch" data-theme="warmgray" title="Warm Gray">
+          <button class="theme-swatch" data-theme="warmgray"  title="Warm Gray">
             <span class="swatch-preview" style="background:#1a1814;border-color:rgba(255,240,200,.1)"></span>
             <span class="swatch-label">Warm Gray</span>
           </button>
@@ -144,55 +180,90 @@
       <section class="settings-section">
         <h2 class="section-title">Accent Color</h2>
         <div class="accent-grid">
-          <button class="accent-swatch" data-accent="blue"    style="background:#0a84ff" title="Blue"   aria-label="Blue"></button>
-          <button class="accent-swatch" data-accent="purple"  style="background:#bf5af2" title="Purple" aria-label="Purple"></button>
-          <button class="accent-swatch" data-accent="green"   style="background:#30d158" title="Green"  aria-label="Green"></button>
-          <button class="accent-swatch" data-accent="orange"  style="background:#ff9f0a" title="Orange" aria-label="Orange"></button>
-          <button class="accent-swatch" data-accent="pink"    style="background:#ff375f" title="Pink"   aria-label="Pink"></button>
-          <button class="accent-swatch" data-accent="neutral" style="background:#888"   title="Neutral" aria-label="Neutral"></button>
+          <button class="accent-swatch" data-accent="blue"    style="background:#0a84ff" title="Blue"    aria-label="Blue"></button>
+          <button class="accent-swatch" data-accent="purple"  style="background:#bf5af2" title="Purple"  aria-label="Purple"></button>
+          <button class="accent-swatch" data-accent="green"   style="background:#30d158" title="Green"   aria-label="Green"></button>
+          <button class="accent-swatch" data-accent="orange"  style="background:#ff9f0a" title="Orange"  aria-label="Orange"></button>
+          <button class="accent-swatch" data-accent="pink"    style="background:#ff375f" title="Pink"    aria-label="Pink"></button>
+          <button class="accent-swatch" data-accent="neutral" style="background:#888"    title="Neutral" aria-label="Neutral"></button>
         </div>
       </section>
 
       <section class="settings-section">
-        <h2 class="section-title">Weather</h2>
+        <h2 class="section-title">Font Size</h2>
+        <div class="font-size-row">
+          <button class="font-size-btn" data-size="small">Small</button>
+          <button class="font-size-btn active" data-size="medium">Medium</button>
+          <button class="font-size-btn" data-size="large">Large</button>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h2 class="section-title">Clock &amp; Weather</h2>
+        <div class="toggle-row">
+          <div class="toggle-text"><span class="toggle-label">Show time</span></div>
+          <label class="toggle-wrap"><input type="checkbox" id="toggle-time" class="toggle-input"><span class="toggle-track"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-text"><span class="toggle-label">Show date</span></div>
+          <label class="toggle-wrap"><input type="checkbox" id="toggle-date" class="toggle-input"><span class="toggle-track"></span></label>
+        </div>
         <div class="toggle-row">
           <div class="toggle-text">
             <span class="toggle-label">Show weather widget</span>
-            <span class="toggle-desc">Displays temperature and city on the new tab page. Requires location permission from the browser.</span>
+            <span class="toggle-desc">Shows temperature and city. Requires browser location permission.</span>
           </div>
-          <label class="toggle-wrap" title="Show weather widget">
-            <input type="checkbox" id="toggle-weather" class="toggle-input">
-            <span class="toggle-track"></span>
-          </label>
+          <label class="toggle-wrap"><input type="checkbox" id="toggle-weather" class="toggle-input"><span class="toggle-track"></span></label>
+        </div>
+        <div class="toggle-row" id="temp-unit-row">
+          <div class="toggle-text"><span class="toggle-label">Temperature unit</span></div>
+          <div class="unit-btns">
+            <button class="unit-btn" data-unit="C">°C</button>
+            <button class="unit-btn" data-unit="F">°F</button>
+          </div>
         </div>
       </section>
 
       <section class="settings-section">
         <h2 class="section-title">Interface</h2>
         <div class="toggle-row">
-          <div class="toggle-text">
-            <span class="toggle-label">Show keyboard hints</span>
-          </div>
-          <label class="toggle-wrap">
-            <input type="checkbox" id="toggle-hints" class="toggle-input">
-            <span class="toggle-track"></span>
-          </label>
+          <div class="toggle-text"><span class="toggle-label">Show keyboard hints</span></div>
+          <label class="toggle-wrap"><input type="checkbox" id="toggle-hints" class="toggle-input"><span class="toggle-track"></span></label>
         </div>
         <div class="toggle-row">
           <div class="toggle-text">
             <span class="toggle-label">Show most visited shortcuts</span>
-            <span class="toggle-desc">The 6 tiles below the search bar sort by how often you open each shortcut.</span>
+            <span class="toggle-desc">The 6 tiles below the search bar, sorted by how often you open each shortcut.</span>
           </div>
-          <label class="toggle-wrap">
-            <input type="checkbox" id="toggle-mostvisited" class="toggle-input">
-            <span class="toggle-track"></span>
-          </label>
+          <label class="toggle-wrap"><input type="checkbox" id="toggle-mostvisited" class="toggle-input"><span class="toggle-track"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-text">
+            <span class="toggle-label">Show visit counts</span>
+            <span class="toggle-desc">Displays a small usage number on each tile (e.g. 12×).</span>
+          </div>
+          <label class="toggle-wrap"><input type="checkbox" id="toggle-visitcounts" class="toggle-input"><span class="toggle-track"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-text"><span class="toggle-label">Show settings button</span></div>
+          <label class="toggle-wrap"><input type="checkbox" id="toggle-settingsbtn" class="toggle-input"><span class="toggle-track"></span></label>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h2 class="section-title">Reset Appearance</h2>
+        <div class="action-row">
+          <div class="action-text">
+            <span class="toggle-label">Restore default appearance</span>
+            <span class="toggle-desc">Resets theme, accent color, font size, and all display toggles to defaults.</span>
+          </div>
+          <button id="btn-reset-appearance" class="btn btn-ghost btn-sm">Reset</button>
         </div>
       </section>
 
     </div><!-- /tab-appearance -->
 
-    <!-- ── Tab: Bookmarks ─────────────────────────────────────────── -->
+    <!-- ── Tab: Bookmarks ─────────────────────────────────────────────── -->
     <div id="tab-bookmarks" class="tab-panel" role="tabpanel">
 
       <section class="settings-section">
@@ -200,23 +271,68 @@
         <div class="toggle-row">
           <div class="toggle-text">
             <span class="toggle-label">Include bookmarks in search</span>
-            <span class="toggle-desc">When enabled, your Chrome bookmarks appear in search results. Type <code class="inline-code">b query</code> to search bookmarks only.</span>
+            <span class="toggle-desc">When enabled, bookmarks appear in search results. Type <code class="inline-code">b query</code> to search bookmarks only.</span>
           </div>
-          <label class="toggle-wrap">
-            <input type="checkbox" id="toggle-bookmarks" class="toggle-input">
-            <span class="toggle-track"></span>
-          </label>
+          <label class="toggle-wrap"><input type="checkbox" id="toggle-bookmarks" class="toggle-input"><span class="toggle-track"></span></label>
         </div>
         <div id="bookmark-permission-status" class="permission-status" hidden></div>
       </section>
 
+    </div><!-- /tab-bookmarks -->
+
+    <!-- ── Tab: Data ──────────────────────────────────────────────────── -->
+    <div id="tab-data" class="tab-panel" role="tabpanel">
+
       <section class="settings-section">
-        <h2 class="section-title">Usage Data</h2>
-        <p class="section-desc">LaunchTab tracks how often you open each shortcut locally to sort the most-visited tiles. No data leaves your device.</p>
-        <button id="btn-reset-usage" class="btn btn-ghost">Reset usage data</button>
+        <h2 class="section-title">Export</h2>
+        <p class="section-desc">Download all your shortcuts, search engines, and appearance settings as a JSON file.</p>
+        <button id="btn-export" class="btn btn-ghost">Export JSON</button>
       </section>
 
-    </div><!-- /tab-bookmarks -->
+      <section class="settings-section">
+        <h2 class="section-title">Import</h2>
+        <p class="section-desc">Import from a LaunchTab export file. You can choose to replace all existing data or merge (duplicate keys are skipped).</p>
+        <button id="btn-import" class="btn btn-ghost">Import JSON</button>
+        <!-- Hidden file input — triggered programmatically from the button above -->
+        <input id="import-file-input" type="file" accept=".json,application/json" hidden>
+      </section>
+
+      <section class="settings-section">
+        <h2 class="section-title">Reset</h2>
+        <div class="action-row">
+          <div class="action-text">
+            <span class="toggle-label">Usage data</span>
+            <span class="toggle-desc">Resets the most-visited tile order to default.</span>
+          </div>
+          <button id="btn-reset-usage" class="btn btn-ghost btn-sm">Reset</button>
+        </div>
+      </section>
+
+    </div><!-- /tab-data -->
+
+    <!-- ── Tab: About ─────────────────────────────────────────────────── -->
+    <div id="tab-about" class="tab-panel" role="tabpanel">
+
+      <section class="settings-section">
+        <h2 class="section-title">LaunchTab</h2>
+        <p class="section-desc about-version">Version 0.4.0</p>
+        <p class="section-desc">A minimal, Apple-inspired fuzzy shortcut launcher for your new tab.</p>
+        <div class="about-links">
+          <a href="https://github.com/YOUR_GITHUB/launchtab" target="_blank"
+             rel="noopener noreferrer" class="about-link">GitHub →</a>
+          <a id="link-privacy" href="#" class="about-link">Privacy Policy →</a>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h2 class="section-title">Support</h2>
+        <p class="section-desc">If you enjoy LaunchTab, you can support its development — no pressure, always free.</p>
+        <a href="https://www.buymeacoffee.com/YOURNAME" target="_blank"
+           rel="noopener noreferrer" class="bmc-link">☕ Buy Me a Coffee</a>
+        <p class="section-desc bmc-note">Replace the link above with your own Buy Me a Coffee URL.</p>
+      </section>
+
+    </div><!-- /tab-about -->
 
     <div id="status-banner" class="status-banner" hidden></div>
 

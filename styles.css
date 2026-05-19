@@ -84,27 +84,26 @@ body {
  *
  * ─────────────────────────────────────────────────────────────────────────── */
 
-/* ── Ambient glow container ───────────────────────────────────────────────── */
-/*
- * The container has NO filter and NO background — it is just a positioned
- * frame. Each visual layer (::before and ::after) carries its own
- * filter: blur(), so animations on individual layers remain clearly visible.
+/* ── Ambient Glow — four modes: off | static | pulse | dynamic ───────────────
  *
- * WHY PER-LAYER BLUR?
- *   When filter: blur() sits on the container, Chrome composites all children
- *   together BEFORE blurring. Small movements (26 px drift, 7 % scale) are
- *   fully absorbed inside a 52 px blur radius → animation looks static.
- *   Moving blur to each layer means a 44 px drift is ~70 % larger than the
- *   26 px blur on that layer → motion is clearly visible.
+ * Container: transparent frame only — no filter, no background.
+ * Per-layer blur means animations stay clearly visible (a container blur
+ * would average all child movements into invisibility at small scales).
  *
  * Feinjustieren:
- *   Position    → top / left / transform on .ambient-glow
- *   Größe       → width / height on .ambient-glow
- *   Weichheit   → filter: blur(Xpx) on ::before / ::after
- *   Intensität  → themes.js GLOW_INTENSITY object
- *   Farbe       → themes.js GLOW_COLORS object
- *   Pulse-Dauer → animation-duration in the three pulse-mode rules below
- *   Drift-Weit  → translate() px values in @keyframes glowLayerDrift
+ *   Position         → top / left on .ambient-glow
+ *   Größe            → width / height on .ambient-glow
+ *   Blur/Weichheit   → filter:blur(Xpx) on ::before (42 px) / ::after (26 px)
+ *   Intensität       → themes.js  GLOW_INTENSITY { subtle: 0.11, medium: 0.22, strong: 0.38 }
+ *   Farbe            → themes.js  GLOW_COLORS
+ *
+ *   Pulse-Dauer      → animation-duration on :root[pulse] ::before  (7 s)
+ *   Pulse-Scale      → scale(0.92)/scale(1.14)  in @keyframes glowPulse
+ *   Pulse-Opacity    → 0.45 / 1.0               in @keyframes glowPulse
+ *
+ *   Cloud-Float      → translateY(-16px)         in @keyframes glowCloudFloat   (20 s)
+ *   Cloud-Breathe    → scale(1.18)               in @keyframes glowCloudBreathe (16 s)
+ *   Cloud-Drift      → translate()/scale()       in @keyframes glowCloudDrift   (24 s)
  */
 
 .ambient-glow {
@@ -117,14 +116,9 @@ body {
   pointer-events: none;
   z-index: 0;
   display: none;
-  /* No filter here — applied per-layer so animations are visible */
 }
 
-/* ── Base gradient layer (::before) — shown in static and pulse ───────────── */
-/*
- * Defined without a mode guard so it renders whenever the parent is visible.
- * display:none on the parent automatically hides pseudo-elements too.
- */
+/* Base layer — rendered whenever the container is visible */
 .ambient-glow::before {
   content: '';
   position: absolute;
@@ -139,12 +133,7 @@ body {
   filter: blur(42px);
 }
 
-/* ── Secondary drift layer (::after) — pulse only ─────────────────────────── */
-/*
- * Larger than the base layer, offset slightly, lighter blur so its
- * drift animation is clearly perceptible.
- * Default display:none — overridden to block in pulse mode.
- */
+/* Drift layer — larger element with lighter blur; dynamic mode only */
 .ambient-glow::after {
   content: '';
   position: absolute;
@@ -162,64 +151,74 @@ body {
   display: none;
 }
 
-/* ── Static mode ─────────────────────────────────────────────────────────── */
+/* ── Static ──────────────────────────────────────────────────────────────── */
 
-:root[data-glow-mode="static"] .ambient-glow {
-  display: block;
-  /* ::before visible, ::after stays display:none — clean single-layer glow */
+:root[data-glow-mode="static"] .ambient-glow { display: block; }
+
+/* ── Pulse — strong single-layer breathing ───────────────────────────────── */
+/*
+ * Only ::before animates. Scale 0.92 → 1.14 and opacity 0.45 → 1.0
+ * make the breathing unambiguously visible even at Subtle intensity.
+ * Tuning: scale/opacity in @keyframes glowPulse; duration below (7 s).
+ */
+
+:root[data-glow-mode="pulse"] .ambient-glow { display: block; }
+
+:root[data-glow-mode="pulse"] .ambient-glow::before {
+  animation: glowPulse 7s ease-in-out infinite;
+  will-change: opacity, transform;
 }
 
-/* ── Pulse mode ──────────────────────────────────────────────────────────── */
+@keyframes glowPulse {
+  0%, 100% { transform: scale(0.92); opacity: 0.45; }
+  50%       { transform: scale(1.14); opacity: 1;   }
+}
 
-/* Container floats gently up/down — long, slow wave */
-:root[data-glow-mode="pulse"] .ambient-glow {
+/* ── Dynamic Cloud — organic multi-layer movement ────────────────────────── */
+/*
+ * Three independent animations at non-harmonic durations (16, 20, 24 s).
+ * The container floats vertically, the base layer breathes slowly, and the
+ * drift layer wanders in a 4-stop path — never exactly repeating.
+ * Tuning: translate() in @keyframes glowCloudDrift for drift distance.
+ */
+
+:root[data-glow-mode="dynamic"] .ambient-glow {
   display: block;
-  animation: glowContainerFloat 18s ease-in-out infinite;
+  animation: glowCloudFloat 20s ease-in-out infinite;
   will-change: transform;
 }
 
-/* Base layer breathes: scales 1 → 1.22, opacity pulses. At blur 42 px a
-   22 % scale change is clearly visible (element edge shifts ~33 px). */
-:root[data-glow-mode="pulse"] .ambient-glow::before {
-  animation: glowLayerBreathe 12s ease-in-out infinite;
+:root[data-glow-mode="dynamic"] .ambient-glow::before {
+  animation: glowCloudBreathe 16s ease-in-out infinite;
   will-change: opacity, transform;
 }
 
-/* Drift layer — lighter blur (26 px) so translate(44 px) is unambiguously
-   perceptible (44 px >> 26 px blur). Different cycle length = organic feel. */
-:root[data-glow-mode="pulse"] .ambient-glow::after {
+:root[data-glow-mode="dynamic"] .ambient-glow::after {
   display: block;
-  animation: glowLayerDrift 20s ease-in-out infinite;
+  animation: glowCloudDrift 24s ease-in-out infinite;
   will-change: opacity, transform;
 }
 
-/* ── Keyframes ───────────────────────────────────────────────────────────── */
-
-/* Container: gentle vertical float — very slow, low amplitude */
-@keyframes glowContainerFloat {
-  0%, 100% { transform: translate(-50%, -50%) translateY(  0px); }
-  50%       { transform: translate(-50%, -50%) translateY(-14px); }
+@keyframes glowCloudFloat {
+  0%, 100% { transform: translate(-50%, -50%) translateY(0px);   }
+  50%       { transform: translate(-50%, -50%) translateY(-16px); }
 }
 
-/* Base layer: scale + opacity breathe */
-@keyframes glowLayerBreathe {
+@keyframes glowCloudBreathe {
   0%, 100% { transform: scale(1);    opacity: 0.82; }
-  50%       { transform: scale(1.22); opacity: 1;    }
+  50%       { transform: scale(1.18); opacity: 1;   }
 }
 
-/* Drift layer: translate left-up → right-down across the cycle */
-@keyframes glowLayerDrift {
-  0%   { transform: translate(  0px,   0px) scale(1);    opacity: 0.72; }
-  30%  { transform: translate(-44px,  20px) scale(1.15); opacity: 1;    }
-  65%  { transform: translate( 30px, -24px) scale(0.90); opacity: 0.78; }
-  100% { transform: translate(  0px,   0px) scale(1);    opacity: 0.72; }
+@keyframes glowCloudDrift {
+  0%   { transform: translate(  0px,   0px) scale(1.00); opacity: 0.70; }
+  25%  { transform: translate(-50px,  20px) scale(1.14); opacity: 0.96; }
+  50%  { transform: translate(-28px, -26px) scale(1.05); opacity: 0.80; }
+  75%  { transform: translate( 44px, -14px) scale(0.90); opacity: 0.92; }
+  100% { transform: translate(  0px,   0px) scale(1.00); opacity: 0.70; }
 }
 
-/* ── Accessibility ───────────────────────────────────────────────────────── */
-/*
- * Reduced motion: pulse mode degrades to a richer two-layer static glow
- * (both ::before and ::after visible, neither animated).
- */
+/* ── Accessibility — no animation when reduced motion preferred ──────────── */
+
 @media (prefers-reduced-motion: reduce) {
   .ambient-glow,
   .ambient-glow::before,
@@ -229,8 +228,7 @@ body {
   }
 }
 
-/* ── Content z-index — must sit above the glow layer (z-index: 0) ────────── */
-/* Only z-index is added here; position values are set in the rules below. */
+/* ── Content z-index — above the glow (z-index: 0) ──────────────────────── */
 
 .launcher     { z-index: 1; }
 .clock-widget { z-index: 1; }

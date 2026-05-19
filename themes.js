@@ -121,11 +121,13 @@ const GLOW_COLORS = {
   neutral: "180, 180, 200",
 };
 
-// Peak opacity values per intensity level (the element uses these via CSS var)
+// Peak opacity values per intensity level.
+// These govern the radial-gradient centre opacity; higher = more visible glow.
+// Feinjustieren: edit the values below to taste.
 const GLOW_INTENSITY = {
-  subtle: 0.09,
-  medium: 0.17,
-  strong: 0.28,
+  subtle: 0.11,
+  medium: 0.22,
+  strong: 0.38,
 };
 
 /**
@@ -146,8 +148,8 @@ function applyGlow(mode, color, intensity) {
 
   root.style.setProperty("--glow-color-rgb", rgb);
   root.style.setProperty("--glow-opacity",   String(alpha));
-  // mode drives CSS display + animation via attribute selector
-  root.dataset.glowMode = (mode === "static" || mode === "pulse") ? mode : "off";
+  // mode drives CSS display + animation via attribute selector on :root
+  root.dataset.glowMode = ["static", "pulse", "dynamic"].includes(mode) ? mode : "off";
 
   try {
     localStorage.setItem("lt_glow_mode",      mode      || "off");

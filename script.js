@@ -648,3 +648,51 @@ Promise.all([
     initWeather(document.getElementById("weather-widget"), appearance.tempUnit || "C");
   }
 });
+
+/* ─── Bidirectional live sync ────────────────────────────────────────────────
+ *
+ * Updates in-memory SHORTCUTS and APPEARANCE whenever chrome.storage changes
+ * in the active area (sync or local).  Without this, the in-memory state on
+ * Device A would never update when Device B writes — the next save from
+ * Device A would silently overwrite Device B's changes.
+ *
+ * Only SHORTCUTS and APPEARANCE are handled here; SEARCH_ENGINES require a
+ * page reload (they're read once at startup and rarely change in real time).
+ *
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  isSyncEnabled().then(syncEnabled => {
+    const expected = syncEnabled ? "sync" : "local";
+    if (areaName !== expected) return;
+
+    if (changes[STORAGE_KEY]) {
+      const v = changes[STORAGE_KEY].newValue;
+      if (Array.isArray(v)) {
+        SHORTCUTS = v;
+        renderDefaultGrid();
+      }
+    }
+
+    if (changes[APPEARANCE_KEY]) {
+      const v = changes[APPEARANCE_KEY].newValue;
+      if (v && typeof v === "object") {
+        APPEARANCE = { ...APPEARANCE, ...v };
+        applyTheme(APPEARANCE.theme, APPEARANCE.accent);
+        applyFontSize(APPEARANCE.fontSize);
+        applyGlow(APPEARANCE.glowMode, APPEARANCE.glowColor, APPEARANCE.glowIntensity);
+
+        const clockEl = document.querySelector(".clock-widget");
+        if (clockEl) {
+          timeEl.hidden  = !APPEARANCE.showTime;
+          dateEl.hidden  = !APPEARANCE.showDate;
+          clockEl.hidden = !APPEARANCE.showTime && !APPEARANCE.showDate && !APPEARANCE.showWeather;
+        }
+        if (hintsEl) hintsEl.hidden = !APPEARANCE.showHints;
+        const settingsBtnEl = document.getElementById("settings-btn");
+        if (settingsBtnEl) settingsBtnEl.hidden = !APPEARANCE.showSettingsBtn;
+        renderDefaultGrid();
+      }
+    }
+  });
+});

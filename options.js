@@ -1221,3 +1221,57 @@ Promise.all([
   renderBookmarksTab();
   renderSyncTab();
 });
+
+/* ─── Bidirectional live sync ────────────────────────────────────────────────
+ *
+ * Listens for storage changes in the ACTIVE area (sync or local).
+ *
+ * WHY THIS IS NEEDED FOR BIDIRECTIONAL SYNC:
+ *   Without this listener, Device A's in-memory state is never updated when
+ *   Device B writes to chrome.storage.sync.  The next time Device A saves
+ *   anything, it writes its STALE in-memory state back to sync — silently
+ *   overwriting Device B's changes (classic "lost update" problem).
+ *
+ *   With the listener, every write by any device immediately updates the
+ *   in-memory state of all other open pages, so the next save from any device
+ *   starts from the current truth in sync.
+ *
+ * SAME-DEVICE WRITES:
+ *   When this page itself writes, onChanged fires here too.  The handler
+ *   re-reads the same newValue and re-renders — harmless idempotent operation.
+ *
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  isSyncEnabled().then(syncEnabled => {
+    const expected = syncEnabled ? "sync" : "local";
+    if (areaName !== expected) return;
+
+    if (changes[STORAGE_KEY]) {
+      const v = changes[STORAGE_KEY].newValue;
+      if (Array.isArray(v)) {
+        shortcuts = v;
+        renderShortcutList();
+      }
+    }
+
+    if (changes[SE_STORAGE_KEY]) {
+      const v = changes[SE_STORAGE_KEY].newValue;
+      if (Array.isArray(v)) {
+        engines = v;
+        renderEngineList();
+      }
+    }
+
+    if (changes[APPEARANCE_KEY]) {
+      const v = changes[APPEARANCE_KEY].newValue;
+      if (v && typeof v === "object") {
+        appearance = { ...DEFAULT_APPEARANCE, ...v };
+        applyTheme(appearance.theme, appearance.accent);
+        applyFontSize(appearance.fontSize);
+        applyGlow(appearance.glowMode, appearance.glowColor, appearance.glowIntensity);
+        renderAppearance();
+      }
+    }
+  });
+});

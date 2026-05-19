@@ -94,15 +94,19 @@ body {
   pointer-events: none;
   z-index: 0;
   border-radius: 50%;
+  /*
+   * Gradient: kept on the base element for static mode.
+   * Pulse mode adds ::before and ::after layers on top of this.
+   * Feinjustieren: Opazität → themes.js GLOW_INTENSITY; Breite/Höhe → oben.
+   */
   background: radial-gradient(
     ellipse at center,
-    rgba(var(--glow-color-rgb), var(--glow-opacity))                0%,
-    rgba(var(--glow-color-rgb), calc(var(--glow-opacity) * 0.4))   50%,
-    transparent                                                     75%
+    rgba(var(--glow-color-rgb), var(--glow-opacity))               0%,
+    rgba(var(--glow-color-rgb), calc(var(--glow-opacity) * 0.5))   45%,
+    transparent                                                     72%
   );
-  filter: blur(56px);
+  filter: blur(52px);
   display: none;                       /* hidden when mode = "off" */
-  will-change: opacity, transform;     /* hint compositor for pulse */
 }
 
 /* ── Static mode ─────────────────────────────────────────────────────────── */
@@ -111,29 +115,102 @@ body {
   display: block;
 }
 
-/* ── Pulse mode ──────────────────────────────────────────────────────────── */
+/* ── Pulse mode — organic multi-layer cloud ───────────────────────────────── */
+/*
+ * Three separate gradient layers animate at different speeds and directions,
+ * creating an organic, never-repeating feel:
+ *
+ *   Base element  breathes  (scale + opacity)  every 14 s
+ *   ::before      drifts    (translate + scale) every 18 s
+ *   ::after       drifts    (translate + scale) every 22 s
+ *
+ * The parent's filter:blur() composites all three layers together into a
+ * single soft cloud — no per-layer blur needed.
+ *
+ * Feinjustieren:
+ *   Dauer      → animation-duration in the three selector rules below
+ *   Bewegung   → translate() px-Werte in @keyframes glowDriftA / glowDriftB
+ *   Skalierung → scale() in @keyframes glowBreathe
+ *   Intensität → themes.js GLOW_INTENSITY-Objekt
+ */
 
 :root[data-glow-mode="pulse"] .ambient-glow {
   display: block;
-  animation: ambientGlowPulse 12s ease-in-out infinite;
+  will-change: opacity, transform;
+  animation: glowBreathe 14s ease-in-out infinite;
 }
 
-@keyframes ambientGlowPulse {
+/* Second layer — offset toward top-left, longer cycle */
+:root[data-glow-mode="pulse"] .ambient-glow::before {
+  content: '';
+  position: absolute;
+  inset: -18%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse 75% 65% at 38% 42%,
+    rgba(var(--glow-color-rgb), calc(var(--glow-opacity) * 0.75)) 0%,
+    transparent 65%
+  );
+  pointer-events: none;
+  will-change: opacity, transform;
+  animation: glowDriftA 18s ease-in-out infinite;
+}
+
+/* Third layer — offset toward bottom-right, longest cycle */
+:root[data-glow-mode="pulse"] .ambient-glow::after {
+  content: '';
+  position: absolute;
+  inset: -12%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse 65% 75% at 62% 58%,
+    rgba(var(--glow-color-rgb), calc(var(--glow-opacity) * 0.6)) 0%,
+    transparent 60%
+  );
+  pointer-events: none;
+  will-change: opacity, transform;
+  animation: glowDriftB 22s ease-in-out infinite;
+}
+
+/* ── Keyframes ───────────────────────────────────────────────────────────── */
+
+@keyframes glowBreathe {
   0%, 100% {
-    opacity: 0.78;
+    opacity: 0.82;
     transform: translate(-50%, -50%) scale(1);
   }
   50% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1.04);
+    transform: translate(-50%, -50%) scale(1.07);
   }
+}
+
+/* Drifts: left-up first half, right-down second half */
+@keyframes glowDriftA {
+  0%, 100% { transform: translate(   0px,   0px) scale(1);    opacity: 0.75; }
+  35%       { transform: translate( -26px,  16px) scale(1.07); opacity: 1;    }
+  70%       { transform: translate(  18px, -12px) scale(0.95); opacity: 0.78; }
+}
+
+/* Drifts: right-up first half, left-down second half */
+@keyframes glowDriftB {
+  0%, 100% { transform: translate(   0px,   0px) scale(1);    opacity: 0.7;  }
+  40%       { transform: translate(  22px, -22px) scale(1.05); opacity: 0.95; }
+  75%       { transform: translate( -14px,  12px) scale(0.96); opacity: 0.72; }
 }
 
 /* ── Accessibility ───────────────────────────────────────────────────────── */
 
+/*
+ * With reduced motion: pulse mode degrades to a richer static glow
+ * (all three layers visible but not animated).
+ */
 @media (prefers-reduced-motion: reduce) {
-  .ambient-glow {
+  .ambient-glow,
+  .ambient-glow::before,
+  .ambient-glow::after {
     animation: none !important;
+    will-change: auto;
   }
 }
 

@@ -26,23 +26,24 @@ const DEFAULT_SEARCH_ENGINES = [
 const SE_STORAGE_KEY = "launchtab_search_engines";
 
 function getSearchEngines() {
-  return new Promise(resolve => {
-    chrome.storage.local.get([SE_STORAGE_KEY], r => {
+  // Uses getStore() from storage.js — sync-aware when Sync is enabled.
+  return getStore().then(store => new Promise(resolve => {
+    store.get([SE_STORAGE_KEY], r => {
       const stored = r[SE_STORAGE_KEY];
       if (stored && stored.length > 0) {
         resolve(stored);
       } else {
+        // No engines in current store — write defaults to local as safe baseline.
         const d = DEFAULT_SEARCH_ENGINES.map(e => ({ ...e }));
         chrome.storage.local.set({ [SE_STORAGE_KEY]: d }, () => resolve(d));
       }
     });
-  });
+  }));
 }
 
 function saveSearchEngines(engines) {
-  return new Promise(resolve => {
-    chrome.storage.local.set({ [SE_STORAGE_KEY]: engines }, resolve);
-  });
+  // Uses getStore() + storeSet() from storage.js — sync-aware when Sync is enabled.
+  return getStore().then(store => storeSet(store, { [SE_STORAGE_KEY]: engines }));
 }
 
 function resetSearchEngines() {

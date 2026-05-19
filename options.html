@@ -426,10 +426,27 @@
 
     </div><!-- /tab-about -->
 
-    <!-- Status / undo toast — sticks to bottom of page content -->
+    <!-- Status toast -->
     <div id="status-banner" class="status-banner" hidden></div>
 
   </div><!-- /page -->
+
+  <!-- ── Delete Confirm Modal ─────────────────────────────────────────────── -->
+  <!--
+    Sits outside .page so it isn't clipped by any overflow.
+    Shown/hidden by JS. Focus is trapped inside while open.
+  -->
+  <div id="delete-confirm-modal" class="dcm-backdrop" hidden
+       role="dialog" aria-modal="true" aria-labelledby="dcm-title">
+    <div class="dcm-box">
+      <p id="dcm-title" class="dcm-title">Delete?</p>
+      <p id="dcm-desc"  class="dcm-desc"></p>
+      <div class="dcm-actions">
+        <button id="dcm-cancel" class="btn btn-ghost">Cancel</button>
+        <button id="dcm-delete" class="btn btn-danger">Delete</button>
+      </div>
+    </div>
+  </div>
 
   <script src="defaults.js"></script>
   <script src="storage.js"></script>

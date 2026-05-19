@@ -91,6 +91,56 @@ function setFieldError(id, msg) {
   el.hidden      = !msg;
 }
 
+/* ─── Delete Confirm Modal ───────────────────────────────────────────────────
+ *
+ * Small floating modal — no overlapping with list rows.
+ * Usage: showDeleteConfirm(name, onConfirm)
+ *   - Escape / Cancel → closes without deleting
+ *   - Delete button   → calls onConfirm(), then closes
+ *
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+const _delModal       = document.getElementById("delete-confirm-modal");
+const _delModalDesc   = document.getElementById("dcm-desc");
+const _delModalCancel = document.getElementById("dcm-cancel");
+const _delModalDelete = document.getElementById("dcm-delete");
+let   _delOnConfirm   = null;
+let   _delReturnFocus = null;   // element to re-focus after modal closes
+
+function showDeleteConfirm(name, onConfirm) {
+  _delOnConfirm   = onConfirm;
+  _delReturnFocus = document.activeElement;
+  _delModalDesc.textContent = `"${name}" will be permanently removed.`;
+  _delModal.hidden = false;
+  _delModalDelete.focus();
+}
+
+function hideDeleteConfirm() {
+  _delModal.hidden = true;
+  _delOnConfirm    = null;
+  if (_delReturnFocus && typeof _delReturnFocus.focus === "function") {
+    _delReturnFocus.focus();
+  }
+}
+
+_delModalCancel.addEventListener("click", hideDeleteConfirm);
+
+_delModalDelete.addEventListener("click", () => {
+  const fn = _delOnConfirm;
+  hideDeleteConfirm();
+  if (fn) fn();
+});
+
+_delModal.addEventListener("keydown", e => {
+  if (e.key === "Escape") { e.preventDefault(); hideDeleteConfirm(); }
+  // Tab cycles only between Cancel and Delete
+  if (e.key === "Tab") {
+    e.preventDefault();
+    if (document.activeElement === _delModalDelete) _delModalCancel.focus();
+    else _delModalDelete.focus();
+  }
+});
+
 /* ─── Tab Switching ──────────────────────────────────────────────────────── */
 
 document.querySelectorAll(".tab-btn").forEach(btn => {
@@ -122,6 +172,9 @@ if (privacyLink) {
  * ══════════════════════════════════════════════════════════════════════════ */
 
 document.addEventListener("keydown", (e) => {
+  // Let the delete-confirm modal handle its own keyboard events
+  if (_delModal && !_delModal.hidden) return;
+
   const inputFocused = ["INPUT", "TEXTAREA", "SELECT"]
     .includes(document.activeElement.tagName);
 
@@ -291,42 +344,39 @@ function createShortcutItem(sc) {
   return item;
 }
 
-/* ─── Delete with undo toast ─────────────────────────────────────────────── */
+/* ─── Delete with confirm modal ──────────────────────────────────────────── */
 
 function doDeleteShortcut(sc) {
-  const snapshot = [...shortcuts];
-  deleteShortcut(sc.key).then(u => {
-    shortcuts = u;
-    const restoreKey = focusedItemIdx >= 0
-      ? snapshot[Math.min(focusedItemIdx, snapshot.length - 2)]?.key
-      : null;
-    renderShortcutList(restoreKey || null);
-    if (editingKey === sc.key) closeShortcutForm();
-    showStatusWithUndo(`"${sc.name}" deleted.`, () => {
-      shortcuts = snapshot;
-      saveShortcuts(shortcuts).then(() => {
-        renderShortcutList(sc.key);
-        showStatus("Restored.");
-      });
+  // Determine which item to focus after deletion (sibling in the current list)
+  const currentItems = Array.from(shortcutList.querySelectorAll(".shortcut-item[data-key]"));
+  const idx = currentItems.findIndex(el => el.dataset.key === sc.key);
+  const nextKey = currentItems[idx + 1]?.dataset.key
+    || currentItems[idx - 1]?.dataset.key
+    || null;
+
+  showDeleteConfirm(sc.name, () => {
+    deleteShortcut(sc.key).then(u => {
+      shortcuts = u;
+      renderShortcutList(nextKey);
+      if (editingKey === sc.key) closeShortcutForm();
+      showStatus(`"${sc.name}" deleted.`);
     });
   });
 }
 
 function doDeleteEngine(eng) {
-  const snapshot = [...engines];
-  engines = engines.filter(e => e.key !== eng.key);
-  saveSearchEngines(engines).then(() => {
-    const restoreKey = focusedEngineIdx >= 0
-      ? snapshot[Math.min(focusedEngineIdx, snapshot.length - 2)]?.key
-      : null;
-    renderEngineList(restoreKey || null);
-    if (editingEngKey === eng.key) closeEngineForm();
-    showStatusWithUndo(`"${eng.name}" removed.`, () => {
-      engines = snapshot;
-      saveSearchEngines(engines).then(() => {
-        renderEngineList(eng.key);
-        showStatus("Restored.");
-      });
+  const currentItems = Array.from(engineList.querySelectorAll(".engine-item[data-key]"));
+  const idx = currentItems.findIndex(el => el.dataset.key === eng.key);
+  const nextKey = currentItems[idx + 1]?.dataset.key
+    || currentItems[idx - 1]?.dataset.key
+    || null;
+
+  showDeleteConfirm(eng.name, () => {
+    engines = engines.filter(e => e.key !== eng.key);
+    saveSearchEngines(engines).then(() => {
+      renderEngineList(nextKey);
+      if (editingEngKey === eng.key) closeEngineForm();
+      showStatus(`"${eng.name}" removed.`);
     });
   });
 }
@@ -1000,6 +1050,11 @@ async function reloadData() {
   shortcuts  = sc;
   engines    = eng;
   appearance = ap;
+  // Apply visual styles from the newly loaded appearance AND update localStorage mirror,
+  // so subsequent main-page loads pick up the synced theme without FOUC.
+  applyTheme(ap.theme, ap.accent);
+  applyFontSize(ap.fontSize || "medium");
+  applyGlow(ap.glowMode, ap.glowColor, ap.glowIntensity);
   renderShortcutList();
   renderEngineList();
   renderAppearance();

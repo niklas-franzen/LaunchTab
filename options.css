@@ -415,6 +415,64 @@ html, body {
 .glow-intensity-btn:hover  { background: rgba(255,255,255,.1); }
 .glow-intensity-btn.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(10,132,255,.3); }
 
+/* ─── Delete Confirm Modal ───────────────────────────────────────────────────
+ *
+ * Full-screen backdrop + centred card. No list-row overlap possible.
+ * Keyboard: Tab cycles Cancel ↔ Delete. Escape closes (handled in JS).
+ *
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+.dcm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+.dcm-backdrop[hidden] { display: none; }
+
+.dcm-box {
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-lg);
+  padding: 24px 28px 20px;
+  width: min(340px, 88vw);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+}
+
+.dcm-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  margin-bottom: 6px;
+}
+
+.dcm-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin-bottom: 20px;
+}
+
+.dcm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* Danger button — used only for destructive confirm actions */
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+  border: none;
+}
+.btn-danger:hover { opacity: 0.85; }
+
 /* ─── Status / Undo Toast ────────────────────────────────────────────────────
  *
  * Replaces the old confirm-wrap-in-row approach.

@@ -84,126 +84,141 @@ body {
  *
  * ─────────────────────────────────────────────────────────────────────────── */
 
+/* ── Ambient glow container ───────────────────────────────────────────────── */
+/*
+ * The container has NO filter and NO background — it is just a positioned
+ * frame. Each visual layer (::before and ::after) carries its own
+ * filter: blur(), so animations on individual layers remain clearly visible.
+ *
+ * WHY PER-LAYER BLUR?
+ *   When filter: blur() sits on the container, Chrome composites all children
+ *   together BEFORE blurring. Small movements (26 px drift, 7 % scale) are
+ *   fully absorbed inside a 52 px blur radius → animation looks static.
+ *   Moving blur to each layer means a 44 px drift is ~70 % larger than the
+ *   26 px blur on that layer → motion is clearly visible.
+ *
+ * Feinjustieren:
+ *   Position    → top / left / transform on .ambient-glow
+ *   Größe       → width / height on .ambient-glow
+ *   Weichheit   → filter: blur(Xpx) on ::before / ::after
+ *   Intensität  → themes.js GLOW_INTENSITY object
+ *   Farbe       → themes.js GLOW_COLORS object
+ *   Pulse-Dauer → animation-duration in the three pulse-mode rules below
+ *   Drift-Weit  → translate() px values in @keyframes glowLayerDrift
+ */
+
 .ambient-glow {
   position: fixed;
   left: 50%;
-  top: 38%;                            /* ~where the search bar lands */
-  width: min(820px, 82vw);
-  height: 320px;
+  top: 38%;
+  width: min(800px, 80vw);
+  height: 300px;
   transform: translate(-50%, -50%);
   pointer-events: none;
   z-index: 0;
+  display: none;
+  /* No filter here — applied per-layer so animations are visible */
+}
+
+/* ── Base gradient layer (::before) — shown in static and pulse ───────────── */
+/*
+ * Defined without a mode guard so it renders whenever the parent is visible.
+ * display:none on the parent automatically hides pseudo-elements too.
+ */
+.ambient-glow::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   border-radius: 50%;
-  /*
-   * Gradient: kept on the base element for static mode.
-   * Pulse mode adds ::before and ::after layers on top of this.
-   * Feinjustieren: Opazität → themes.js GLOW_INTENSITY; Breite/Höhe → oben.
-   */
   background: radial-gradient(
-    ellipse at center,
+    ellipse at 50% 50%,
     rgba(var(--glow-color-rgb), var(--glow-opacity))               0%,
-    rgba(var(--glow-color-rgb), calc(var(--glow-opacity) * 0.5))   45%,
-    transparent                                                     72%
+    rgba(var(--glow-color-rgb), calc(var(--glow-opacity) * 0.48))  46%,
+    transparent                                                     70%
   );
-  filter: blur(52px);
-  display: none;                       /* hidden when mode = "off" */
+  filter: blur(42px);
+}
+
+/* ── Secondary drift layer (::after) — pulse only ─────────────────────────── */
+/*
+ * Larger than the base layer, offset slightly, lighter blur so its
+ * drift animation is clearly perceptible.
+ * Default display:none — overridden to block in pulse mode.
+ */
+.ambient-glow::after {
+  content: '';
+  position: absolute;
+  width: 140%;
+  height: 145%;
+  left: -20%;
+  top: -22%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse 68% 60% at 42% 46%,
+    rgba(var(--glow-color-rgb), calc(var(--glow-opacity) * 0.72)) 0%,
+    transparent 65%
+  );
+  filter: blur(26px);
+  display: none;
 }
 
 /* ── Static mode ─────────────────────────────────────────────────────────── */
 
 :root[data-glow-mode="static"] .ambient-glow {
   display: block;
+  /* ::before visible, ::after stays display:none — clean single-layer glow */
 }
 
-/* ── Pulse mode — organic multi-layer cloud ───────────────────────────────── */
-/*
- * Three separate gradient layers animate at different speeds and directions,
- * creating an organic, never-repeating feel:
- *
- *   Base element  breathes  (scale + opacity)  every 14 s
- *   ::before      drifts    (translate + scale) every 18 s
- *   ::after       drifts    (translate + scale) every 22 s
- *
- * The parent's filter:blur() composites all three layers together into a
- * single soft cloud — no per-layer blur needed.
- *
- * Feinjustieren:
- *   Dauer      → animation-duration in the three selector rules below
- *   Bewegung   → translate() px-Werte in @keyframes glowDriftA / glowDriftB
- *   Skalierung → scale() in @keyframes glowBreathe
- *   Intensität → themes.js GLOW_INTENSITY-Objekt
- */
+/* ── Pulse mode ──────────────────────────────────────────────────────────── */
 
+/* Container floats gently up/down — long, slow wave */
 :root[data-glow-mode="pulse"] .ambient-glow {
   display: block;
-  will-change: opacity, transform;
-  animation: glowBreathe 14s ease-in-out infinite;
+  animation: glowContainerFloat 18s ease-in-out infinite;
+  will-change: transform;
 }
 
-/* Second layer — offset toward top-left, longer cycle */
+/* Base layer breathes: scales 1 → 1.22, opacity pulses. At blur 42 px a
+   22 % scale change is clearly visible (element edge shifts ~33 px). */
 :root[data-glow-mode="pulse"] .ambient-glow::before {
-  content: '';
-  position: absolute;
-  inset: -18%;
-  border-radius: 50%;
-  background: radial-gradient(
-    ellipse 75% 65% at 38% 42%,
-    rgba(var(--glow-color-rgb), calc(var(--glow-opacity) * 0.75)) 0%,
-    transparent 65%
-  );
-  pointer-events: none;
+  animation: glowLayerBreathe 12s ease-in-out infinite;
   will-change: opacity, transform;
-  animation: glowDriftA 18s ease-in-out infinite;
 }
 
-/* Third layer — offset toward bottom-right, longest cycle */
+/* Drift layer — lighter blur (26 px) so translate(44 px) is unambiguously
+   perceptible (44 px >> 26 px blur). Different cycle length = organic feel. */
 :root[data-glow-mode="pulse"] .ambient-glow::after {
-  content: '';
-  position: absolute;
-  inset: -12%;
-  border-radius: 50%;
-  background: radial-gradient(
-    ellipse 65% 75% at 62% 58%,
-    rgba(var(--glow-color-rgb), calc(var(--glow-opacity) * 0.6)) 0%,
-    transparent 60%
-  );
-  pointer-events: none;
+  display: block;
+  animation: glowLayerDrift 20s ease-in-out infinite;
   will-change: opacity, transform;
-  animation: glowDriftB 22s ease-in-out infinite;
 }
 
 /* ── Keyframes ───────────────────────────────────────────────────────────── */
 
-@keyframes glowBreathe {
-  0%, 100% {
-    opacity: 0.82;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1.07);
-  }
+/* Container: gentle vertical float — very slow, low amplitude */
+@keyframes glowContainerFloat {
+  0%, 100% { transform: translate(-50%, -50%) translateY(  0px); }
+  50%       { transform: translate(-50%, -50%) translateY(-14px); }
 }
 
-/* Drifts: left-up first half, right-down second half */
-@keyframes glowDriftA {
-  0%, 100% { transform: translate(   0px,   0px) scale(1);    opacity: 0.75; }
-  35%       { transform: translate( -26px,  16px) scale(1.07); opacity: 1;    }
-  70%       { transform: translate(  18px, -12px) scale(0.95); opacity: 0.78; }
+/* Base layer: scale + opacity breathe */
+@keyframes glowLayerBreathe {
+  0%, 100% { transform: scale(1);    opacity: 0.82; }
+  50%       { transform: scale(1.22); opacity: 1;    }
 }
 
-/* Drifts: right-up first half, left-down second half */
-@keyframes glowDriftB {
-  0%, 100% { transform: translate(   0px,   0px) scale(1);    opacity: 0.7;  }
-  40%       { transform: translate(  22px, -22px) scale(1.05); opacity: 0.95; }
-  75%       { transform: translate( -14px,  12px) scale(0.96); opacity: 0.72; }
+/* Drift layer: translate left-up → right-down across the cycle */
+@keyframes glowLayerDrift {
+  0%   { transform: translate(  0px,   0px) scale(1);    opacity: 0.72; }
+  30%  { transform: translate(-44px,  20px) scale(1.15); opacity: 1;    }
+  65%  { transform: translate( 30px, -24px) scale(0.90); opacity: 0.78; }
+  100% { transform: translate(  0px,   0px) scale(1);    opacity: 0.72; }
 }
 
 /* ── Accessibility ───────────────────────────────────────────────────────── */
-
 /*
- * With reduced motion: pulse mode degrades to a richer static glow
- * (all three layers visible but not animated).
+ * Reduced motion: pulse mode degrades to a richer two-layer static glow
+ * (both ::before and ::after visible, neither animated).
  */
 @media (prefers-reduced-motion: reduce) {
   .ambient-glow,

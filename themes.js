@@ -1,8 +1,7 @@
-/* themes.js — Theme and accent color system for LaunchTab.
+/* themes.js — Theme, accent, font-size, and ambient glow system for LaunchTab.
  *
- * The IIFE at the bottom applies the saved theme from localStorage IMMEDIATELY
- * on script load (before the first paint), eliminating any flash of the
- * default Graphite theme when a different theme is selected.
+ * The IIFE at the bottom applies saved settings from localStorage IMMEDIATELY
+ * on script load (before the first paint), eliminating flash of the default theme.
  *
  * chrome.storage is async — localStorage serves as a synchronous mirror that
  * is kept in sync by saveAppearance() in storage.js.
@@ -82,7 +81,7 @@ const ACCENT_DEFINITIONS = {
 
 /**
  * Applies theme + accent CSS variables to document root via inline styles.
- * Inline styles override the stylesheet defaults, so no CSS specificity tricks needed.
+ * Inline styles override the stylesheet defaults — no specificity tricks needed.
  */
 function applyTheme(themeName, accentName) {
   const root   = document.documentElement;
@@ -96,32 +95,83 @@ function applyTheme(themeName, accentName) {
   root.dataset.theme  = themeName;
   root.dataset.accent = accentName;
 
-  // Mirror to localStorage so the next page load can apply instantly (no flash)
   try {
     localStorage.setItem("lt_theme",  themeName);
     localStorage.setItem("lt_accent", accentName);
-  } catch (_) { /* ignore if storage is blocked */ }
+  } catch (_) {}
 }
 
 /* ─── Font Size ──────────────────────────────────────────────────────────── */
 
 const FONT_SCALES = { small: "0.875", medium: "1", large: "1.125" };
 
-/**
- * Sets --font-scale on the document root. Key UI elements in styles.css use
- * calc(var(--font-scale) * Xpx) so a single variable controls the whole UI.
- */
 function applyFontSize(size) {
   const scale = FONT_SCALES[size] || "1";
   document.documentElement.style.setProperty("--font-scale", scale);
   try { localStorage.setItem("lt_fontsize", size); } catch (_) {}
 }
 
+/* ─── Ambient Glow ───────────────────────────────────────────────────────── */
+
+// Raw RGB values for each glow colour (used as CSS variable --glow-color-rgb)
+const GLOW_COLORS = {
+  blue:    "10, 132, 255",
+  purple:  "191, 90, 242",
+  green:   "48, 209, 88",
+  neutral: "180, 180, 200",
+};
+
+// Peak opacity values per intensity level (the element uses these via CSS var)
+const GLOW_INTENSITY = {
+  subtle: 0.09,
+  medium: 0.17,
+  strong: 0.28,
+};
+
+/**
+ * Applies or removes the ambient search glow.
+ *
+ * mode     "off" | "static" | "pulse"
+ * color    "blue" | "purple" | "green" | "neutral"
+ * intensity "subtle" | "medium" | "strong"
+ *
+ * Sets CSS custom properties + data-glow-mode on :root.
+ * The .ambient-glow element in app.html is shown/hidden entirely via CSS
+ * selectors on data-glow-mode, so there are zero JS layout changes.
+ */
+function applyGlow(mode, color, intensity) {
+  const root  = document.documentElement;
+  const rgb   = GLOW_COLORS[color]     || GLOW_COLORS.blue;
+  const alpha = GLOW_INTENSITY[intensity] || GLOW_INTENSITY.subtle;
+
+  root.style.setProperty("--glow-color-rgb", rgb);
+  root.style.setProperty("--glow-opacity",   String(alpha));
+  // mode drives CSS display + animation via attribute selector
+  root.dataset.glowMode = (mode === "static" || mode === "pulse") ? mode : "off";
+
+  try {
+    localStorage.setItem("lt_glow_mode",      mode      || "off");
+    localStorage.setItem("lt_glow_color",     color     || "blue");
+    localStorage.setItem("lt_glow_intensity", intensity || "subtle");
+  } catch (_) {}
+}
+
 // Apply all visual settings immediately from localStorage — no FOUC
 (function applyFromLocalStorage() {
-  const t = localStorage.getItem("lt_theme")   || "graphite";
-  const a = localStorage.getItem("lt_accent")  || "blue";
-  const s = localStorage.getItem("lt_fontsize") || "medium";
+  const t  = localStorage.getItem("lt_theme")         || "graphite";
+  const a  = localStorage.getItem("lt_accent")        || "blue";
+  const s  = localStorage.getItem("lt_fontsize")      || "medium";
+
+  // Migrate: old lt_glow_enabled (boolean string) → new lt_glow_mode
+  let gm = localStorage.getItem("lt_glow_mode");
+  if (!gm) {
+    const legacyEnabled = localStorage.getItem("lt_glow_enabled");
+    gm = legacyEnabled === "true" ? "static" : "off";
+  }
+  const gc = localStorage.getItem("lt_glow_color")    || "blue";
+  const gi = localStorage.getItem("lt_glow_intensity")|| "subtle";
+
   applyTheme(t, a);
   applyFontSize(s);
+  applyGlow(gm, gc, gi);
 }());

@@ -618,11 +618,12 @@ Promise.all([
   SEARCH_ENGINES = engines;
   APPEARANCE     = appearance;
 
-  // Confirm/reapply theme + font size from storage
+  // Confirm/reapply theme + font size + glow from storage
   // (localStorage mirror already applied in themes.js for instant no-FOUC,
   //  but storage is authoritative in case the two diverge)
   applyTheme(appearance.theme, appearance.accent);
   applyFontSize(appearance.fontSize);
+  applyGlow(appearance.glowMode, appearance.glowColor, appearance.glowIntensity);
 
   // Clock / weather visibility
   const clockEl = document.querySelector(".clock-widget");

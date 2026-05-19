@@ -41,15 +41,33 @@ Minimal `17°C · Duisburg` display. Celsius or Fahrenheit. Uses Open-Meteo (fre
 - **Accents:** Blue · Purple · Green · Orange · Pink · Neutral
 - **Font sizes:** Small · Medium · Large
 
-### Most visited tiles
+### Ambient search glow
+Optional soft radial glow behind the search bar — Gemini-inspired, very subtle by default.
+Configure in Settings → Appearance → Ambient Glow: toggle, color (Blue/Purple/Green/Neutral), intensity (Subtle/Medium/Strong).
+
+### Most visited tiles — responsive
 The 6 quick-access tiles re-sort automatically by how often you open each shortcut.
+Grid is always equal-width (3 × 2 on wide, 2 × 3 on smaller screens). Long titles are clamped cleanly.
 Optional: show/hide visit counts (e.g. `12×`).
+
+### Sync across Chrome devices (optional)
+Enable in Settings → Data → "Sync shortcuts & settings".
+Shortcuts, search engines, and appearance settings are kept in sync across all your Chrome devices (requires Chrome Sync to be active).
+Usage data and weather cache always remain local.
+
+### Smart duplicate handling
+When adding a shortcut whose URL or key already exists, LaunchTab shows an inline dialog:
+- **URL duplicate:** Update existing entry · Save as duplicate · Cancel
+- **Key conflict:** Replace existing shortcut · Cancel
+
+No browser `confirm()` dialogs — all inline, keyboard-accessible.
 
 ### Flexible display
 Toggle individually: clock, date, weather, keyboard hints, tiles, settings button.
 
 ### JSON Import / Export
 Back up and restore all your shortcuts, search engines, and appearance settings.
+Import uses an inline replace/merge/cancel dialog — no browser dialogs.
 
 ---
 
@@ -86,19 +104,29 @@ done
 Open Settings via the ⚙ icon on the new tab page, or right-click the extension icon → **Options**.
 
 ### Shortcuts
-Add, edit, delete, filter. Keyboard navigation: ↑↓ to highlight, Enter to edit, A to add, Cmd+S to save.
+Add, edit, delete, filter. Keyboard navigation: ↑↓ to highlight, Enter to edit, A to add, Cmd+S to save, Escape to cancel form / deselect.
+Delete uses an **Undo toast** — no blocking confirmation dialog.
 
 ### Search
 Manage search engine prefixes — toggle, add, edit, delete, reset.
 
 ### Appearance
-Theme · Accent color · Font size · Clock/date · Weather (°C/°F) · Hints · Tiles · Visit counts · Restore defaults.
+Theme · Accent color · Ambient Glow · Font size · Clock/date · Weather (°C/°F) · Hints · Tiles · Visit counts · Restore defaults.
 
 ### Bookmarks
 Enable Chrome bookmark search (requests `bookmarks` permission on first enable).
 
 ### Data
-Export JSON · Import JSON (replace or merge) · Reset usage data · Reset appearance.
+**Sync toggle** · Export JSON · Import JSON (inline replace/merge dialog) · Reset usage data.
+
+#### Sync across Chrome devices
+Enable "Sync shortcuts & settings" in the Data tab. When first enabled:
+- If Chrome Sync is empty: your local data is uploaded automatically.
+- If both sides have data: you choose which to keep (upload local / use synced).
+
+When disabled: data stays local; synced data is preserved in Chrome Sync until you sign out.
+
+Usage data, weather cache, and location data are **never** synced.
 
 ### About
 Version info · GitHub link · Privacy policy · Buy Me a Coffee.
@@ -109,15 +137,19 @@ Version info · GitHub link · Privacy policy · Buy Me a Coffee.
 
 Click the LaunchTab icon in Chrome's toolbar. The current page URL and title are pre-filled. Enter a shortcut key and click **Add to LaunchTab**.
 
+If the URL or key already exists, an inline dialog lets you choose what to do.
+
 ---
 
 ## Permissions
 
 | Permission | Why |
 |-----------|-----|
-| `storage` | Saves shortcuts, settings, and usage data locally |
+| `storage` | Saves shortcuts, settings, and usage data — locally or via Chrome Sync |
 | `activeTab` | Reads current tab URL/title in the popup |
 | `bookmarks` *(optional)* | Only requested when you enable bookmark search |
+
+`storage` covers both `chrome.storage.local` and `chrome.storage.sync`. Chrome Sync only activates when the user explicitly enables the toggle. No additional permissions are needed.
 
 Geolocation is requested through the browser's normal permission dialog when you enable the weather widget — no manifest entry needed.
 
@@ -127,7 +159,7 @@ No data is transmitted to any server operated by this extension.
 
 ## Privacy
 
-All data stays on your device. See [PRIVACY.md](PRIVACY.md) for the full policy.
+All data stays on your device (or Chrome Sync if you opt in). See [PRIVACY.md](PRIVACY.md) for the full policy.
 
 ---
 
@@ -151,14 +183,14 @@ LaunchTab/
 ├── newtab.css
 ├── app.html             Main launcher UI
 ├── script.js            Core logic
-├── styles.css
-├── themes.js            Theme / accent / font-size system
+├── styles.css           Main styles + ambient glow + responsive grid
+├── themes.js            Theme / accent / font-size / glow system
 ├── defaults.js          Factory-default shortcuts
-├── storage.js           chrome.storage helpers + appearance + usage
+├── storage.js           chrome.storage helpers + sync abstraction + appearance
 ├── search-engines.js    Search-engine prefix system
 ├── weather.js           Weather widget (Open-Meteo + Nominatim)
 ├── bookmarks.js         Optional bookmark search
-├── options.html/css/js  Settings page (6 tabs)
-├── popup.html/css/js    Toolbar popup
+├── options.html/css/js  Settings page (6 tabs incl. Sync + Glow)
+├── popup.html/css/js    Toolbar popup with inline duplicate handling
 └── assets/icons/        Extension icons
 ```

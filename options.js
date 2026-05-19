@@ -14,12 +14,14 @@ let engines     = [];
 let appearance  = {};
 
 // Keyboard navigation state
-let focusedItemIdx   = -1;   // highlighted index in shortcut list
-let focusedEngineIdx = -1;   // highlighted index in engine list
+let focusedItemIdx   = -1;
+let focusedEngineIdx = -1;
 
 // Form modes
-let editingKey    = null;   // null = add; string = editing this key
+let editingKey    = null;   // null = add mode; string = editing this key
 let editingEngKey = null;
+let _preFormFocusKey    = null;  // shortcut key focused before form opened
+let _preEngFormFocusKey = null;  // engine key focused before engine form opened
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 
@@ -27,21 +29,6 @@ function escapeHTML(str) {
   return String(str)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;")
     .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
-function showStatus(msg, type = "ok") {
-  const el = document.getElementById("status-banner");
-  el.textContent = msg;
-  el.className   = `status-banner status-banner--${type}`;
-  el.hidden      = false;
-  setTimeout(() => { el.hidden = true; }, 3500);
-}
-
-function setFieldError(id, msg) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.textContent = msg;
-  el.hidden      = !msg;
 }
 
 /** Normalise a URL for duplicate comparison (strips trailing slash, lower-cases host). */
@@ -55,11 +42,60 @@ function normalizeUrlForCompare(url) {
   }
 }
 
+/* ─── Status / Undo Toast ────────────────────────────────────────────────── */
+
+let _undoTimer = null;
+
+function showStatus(msg, type = "ok") {
+  const el = document.getElementById("status-banner");
+  el.textContent = msg;
+  el.className   = `status-banner status-banner--${type}`;
+  el.hidden      = false;
+  clearTimeout(_undoTimer);
+  _undoTimer = setTimeout(() => { el.hidden = true; }, 3500);
+}
+
+function showStatusWithUndo(msg, onUndo) {
+  clearTimeout(_undoTimer);
+  const el = document.getElementById("status-banner");
+  el.className = "status-banner status-banner--ok";
+  el.hidden    = false;
+  el.innerHTML = "";
+
+  const text = document.createElement("span");
+  text.className   = "status-text";
+  text.textContent = msg;
+  el.appendChild(text);
+
+  const undoBtn = document.createElement("button");
+  undoBtn.className   = "status-undo-btn";
+  undoBtn.textContent = "Undo";
+  undoBtn.addEventListener("click", () => {
+    clearTimeout(_undoTimer);
+    el.hidden    = true;
+    el.innerHTML = "";
+    onUndo();
+  });
+  el.appendChild(undoBtn);
+
+  _undoTimer = setTimeout(() => {
+    el.hidden    = true;
+    el.innerHTML = "";
+  }, 5000);
+}
+
+function setFieldError(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.hidden      = !msg;
+}
+
 /* ─── Tab Switching ──────────────────────────────────────────────────────── */
 
 document.querySelectorAll(".tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
-    focusedItemIdx = focusedEngineIdx = -1;   // reset keyboard nav when switching tabs
+    focusedItemIdx = focusedEngineIdx = -1;
     document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
     document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
     btn.classList.add("active");
@@ -77,15 +113,12 @@ document.getElementById("btn-back").addEventListener("click", () => {
 
 const privacyLink = document.getElementById("link-privacy");
 if (privacyLink) {
-  privacyLink.href = chrome.runtime.getURL("PRIVACY.md");
+  privacyLink.href   = chrome.runtime.getURL("PRIVACY.md");
   privacyLink.target = "_blank";
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
  *  GLOBAL KEYBOARD HANDLER
- *  - Cmd/Ctrl+S  → save the active form (never fires while typing in inputs)
- *  - ArrowUp/Down → navigate the shortcut list (when no input is focused)
- *  - A            → open Add-Shortcut form (when no input focused)
  * ══════════════════════════════════════════════════════════════════════════ */
 
 document.addEventListener("keydown", (e) => {
@@ -104,11 +137,10 @@ document.addEventListener("keydown", (e) => {
     }
   }
 
-  if (inputFocused) return;  // don't steal keys while the user is typing
+  if (inputFocused) return;
 
   const activeTab = document.querySelector(".tab-btn.active")?.dataset.tab;
 
-  // ── Shared navigation helper
   function navigateList(items, idxRef, setIdx, openEditFn, addFn) {
     const len = items.length;
     if (e.key === "ArrowDown") {
@@ -119,65 +151,53 @@ document.addEventListener("keydown", (e) => {
       setIdx(Math.max(idxRef - 1, 0));
     } else if (e.key === "Enter" && idxRef >= 0) {
       e.preventDefault();
-      const key = items[idxRef]?.dataset.key;
-      const item = (shortcuts.concat(engines)).find(s => s.key === key);
+      const key  = items[idxRef]?.dataset.key;
+      const item = shortcuts.concat(engines).find(s => s.key === key);
       if (item) openEditFn(item);
     } else if ((e.key === "Delete" || e.key === "Backspace") && idxRef >= 0) {
-      // Delete/Backspace: trigger inline confirm on the focused item
       e.preventDefault();
-      const el    = items[idxRef];
-      const key   = el?.dataset.key;
-      const acts  = el?.querySelector(".item-actions");
-      if (key && acts) {
-        const sc = shortcuts.find(s => s.key === key);
+      const el  = items[idxRef];
+      const key = el?.dataset.key;
+      if (key) {
+        const sc  = shortcuts.find(s => s.key === key);
         const eng = engines.find(s => s.key === key);
-        if (sc)  confirmShortcutDelete(sc, acts);
-        if (eng) confirmEngineDelete(eng, acts);
+        if (sc)  doDeleteShortcut(sc);
+        if (eng) doDeleteEngine(eng);
       }
     } else if (e.key === "Escape" && idxRef >= 0) {
       e.preventDefault();
       setIdx(-1);
     } else if (e.key === "a" || e.key === "A") {
-      // preventDefault stops the browser from firing keypress after keydown,
-      // so the letter 'a' is never inserted into the form field that gets focus.
       e.preventDefault();
       e.stopPropagation();
       addFn();
     }
   }
 
-  // ── Shortcuts tab
   if (activeTab === "shortcuts") {
     const formCard = document.getElementById("form-card");
     if (formCard && !formCard.hidden) {
-      // Escape closes an open shortcut form
       if (e.key === "Escape") { e.preventDefault(); closeShortcutForm(); }
     } else if (formCard && formCard.hidden) {
       const items = shortcutList.querySelectorAll(".shortcut-item[data-key]");
       navigateList(
-        items,
-        focusedItemIdx,
+        items, focusedItemIdx,
         (i) => { focusedItemIdx = i; updateListFocus(items, focusedItemIdx); },
-        openShortcutEditForm,
-        openShortcutAddForm
+        openShortcutEditForm, openShortcutAddForm
       );
     }
   }
 
-  // ── Search engines tab
   if (activeTab === "engines") {
     const engineFormCard = document.getElementById("engine-form-card");
     if (engineFormCard && !engineFormCard.hidden) {
-      // Escape closes an open engine form
       if (e.key === "Escape") { e.preventDefault(); closeEngineForm(); }
     } else if (engineFormCard && engineFormCard.hidden) {
       const items = engineList.querySelectorAll(".engine-item[data-key]");
       navigateList(
-        items,
-        focusedEngineIdx,
+        items, focusedEngineIdx,
         (i) => { focusedEngineIdx = i; updateListFocus(items, focusedEngineIdx); },
-        openEngineEditForm,
-        openEngineAddForm
+        openEngineEditForm, openEngineAddForm
       );
     }
   }
@@ -187,25 +207,23 @@ function updateListFocus(items, activeIdx) {
   items.forEach((item, i) => {
     item.classList.toggle("keyboard-focused", i === activeIdx);
   });
-  if (activeIdx >= 0) {
-    items[activeIdx].scrollIntoView({ block: "nearest" });
-  }
+  if (activeIdx >= 0) items[activeIdx].scrollIntoView({ block: "nearest" });
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
  *  TAB 1 — SHORTCUTS
  * ══════════════════════════════════════════════════════════════════════════ */
 
-const shortcutList  = document.getElementById("shortcut-list");
-const filterInput   = document.getElementById("filter-input");
-const formCard      = document.getElementById("form-card");
-const formTitle     = document.getElementById("form-title");
-const fKey          = document.getElementById("f-key");
-const fName         = document.getElementById("f-name");
-const fUrl          = document.getElementById("f-url");
-const fCategory     = document.getElementById("f-category");
+const shortcutList = document.getElementById("shortcut-list");
+const filterInput  = document.getElementById("filter-input");
+const formCard     = document.getElementById("form-card");
+const formTitle    = document.getElementById("form-title");
+const fKey         = document.getElementById("f-key");
+const fName        = document.getElementById("f-name");
+const fUrl         = document.getElementById("f-url");
+const fCategory    = document.getElementById("f-category");
 
-function renderShortcutList() {
+function renderShortcutList(restoreFocusKey) {
   shortcutList.innerHTML = "";
   focusedItemIdx = -1;
   const q = filterInput.value.toLowerCase().trim();
@@ -226,14 +244,25 @@ function renderShortcutList() {
     shortcutList.appendChild(p);
     return;
   }
+
   visible.forEach(s => shortcutList.appendChild(createShortcutItem(s)));
+
+  // Restore focus to previously selected/edited item
+  if (restoreFocusKey) {
+    const items = shortcutList.querySelectorAll(".shortcut-item[data-key]");
+    const idx   = Array.from(items).findIndex(el => el.dataset.key === restoreFocusKey);
+    if (idx >= 0) {
+      focusedItemIdx = idx;
+      updateListFocus(items, focusedItemIdx);
+    }
+  }
 }
 
 function createShortcutItem(sc) {
   const item = document.createElement("div");
   item.className = "shortcut-item";
   item.setAttribute("role", "listitem");
-  item.dataset.key = sc.key;   // needed for keyboard navigation
+  item.dataset.key = sc.key;
 
   const favWrap = document.createElement("div");
   favWrap.className = "item-favicon-wrap";
@@ -241,7 +270,7 @@ function createShortcutItem(sc) {
   fav.className = "item-favicon"; fav.src = createFaviconUrl(sc.url);
   fav.alt = ""; fav.width = 20; fav.height = 20; fav.loading = "lazy";
   const favFb = document.createElement("span");
-  favFb.className = "item-favicon-fallback";
+  favFb.className   = "item-favicon-fallback";
   favFb.textContent = sc.name.charAt(0).toUpperCase();
   fav.addEventListener("error", () => { fav.style.display = "none"; favFb.style.display = "flex"; });
   favWrap.append(fav, favFb);
@@ -251,41 +280,68 @@ function createShortcutItem(sc) {
   const domEl  = document.createElement("span"); domEl.className  = "item-domain"; domEl.textContent = getDomain(sc.url);
   const catEl  = document.createElement("span"); catEl.className  = "item-category"; catEl.textContent = sc.category || "—";
 
-  const acts = document.createElement("div"); acts.className = "item-actions";
+  const acts    = document.createElement("div"); acts.className = "item-actions";
   const editBtn = makeIconBtn(editSvg, "Edit", "Edit " + sc.name);
   editBtn.addEventListener("click", () => openShortcutEditForm(sc));
   const delBtn  = makeIconBtn(deleteSvg, "Delete", "Delete " + sc.name, true);
-  delBtn.addEventListener("click", () => confirmShortcutDelete(sc, acts));
+  delBtn.addEventListener("click", () => doDeleteShortcut(sc));
   acts.append(editBtn, delBtn);
 
   item.append(favWrap, keyEl, nameEl, domEl, catEl, acts);
   return item;
 }
 
-function confirmShortcutDelete(sc, actsEl) {
-  actsEl.innerHTML = "";
-  const wrap = document.createElement("div"); wrap.className = "confirm-wrap";
-  const lbl  = document.createElement("span"); lbl.className = "confirm-label"; lbl.textContent = "Delete?";
-  const yes  = document.createElement("button"); yes.className = "btn-confirm-yes"; yes.textContent = "Yes";
-  yes.addEventListener("click", () => {
-    deleteShortcut(sc.key).then(u => {
-      shortcuts = u;
-      renderShortcutList();
-      showStatus(`"${sc.name}" deleted.`);
-      if (editingKey === sc.key) closeShortcutForm();
+/* ─── Delete with undo toast ─────────────────────────────────────────────── */
+
+function doDeleteShortcut(sc) {
+  const snapshot = [...shortcuts];
+  deleteShortcut(sc.key).then(u => {
+    shortcuts = u;
+    const restoreKey = focusedItemIdx >= 0
+      ? snapshot[Math.min(focusedItemIdx, snapshot.length - 2)]?.key
+      : null;
+    renderShortcutList(restoreKey || null);
+    if (editingKey === sc.key) closeShortcutForm();
+    showStatusWithUndo(`"${sc.name}" deleted.`, () => {
+      shortcuts = snapshot;
+      saveShortcuts(shortcuts).then(() => {
+        renderShortcutList(sc.key);
+        showStatus("Restored.");
+      });
     });
   });
-  const no = document.createElement("button"); no.className = "btn-confirm-no"; no.textContent = "No";
-  no.addEventListener("click", () => renderShortcutList());
-  wrap.append(lbl, yes, no);
-  actsEl.appendChild(wrap);
 }
+
+function doDeleteEngine(eng) {
+  const snapshot = [...engines];
+  engines = engines.filter(e => e.key !== eng.key);
+  saveSearchEngines(engines).then(() => {
+    const restoreKey = focusedEngineIdx >= 0
+      ? snapshot[Math.min(focusedEngineIdx, snapshot.length - 2)]?.key
+      : null;
+    renderEngineList(restoreKey || null);
+    if (editingEngKey === eng.key) closeEngineForm();
+    showStatusWithUndo(`"${eng.name}" removed.`, () => {
+      engines = snapshot;
+      saveSearchEngines(engines).then(() => {
+        renderEngineList(eng.key);
+        showStatus("Restored.");
+      });
+    });
+  });
+}
+
+/* ─── Shortcut form ──────────────────────────────────────────────────────── */
 
 function openShortcutAddForm() {
   editingKey = null;
+  _preFormFocusKey = focusedItemIdx >= 0
+    ? shortcutList.querySelectorAll(".shortcut-item[data-key]")[focusedItemIdx]?.dataset.key ?? null
+    : null;
   formTitle.textContent = "Add shortcut";
   fKey.value = ""; fName.value = ""; fUrl.value = ""; fCategory.value = "";
   setFieldError("form-error", "");
+  hideDupDialogs();
   formCard.hidden = false;
   fKey.focus();
   formCard.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -293,19 +349,86 @@ function openShortcutAddForm() {
 
 function openShortcutEditForm(sc) {
   editingKey = sc.key;
+  _preFormFocusKey = sc.key;
   formTitle.textContent = "Edit shortcut";
   fKey.value = sc.key; fName.value = sc.name; fUrl.value = sc.url; fCategory.value = sc.category || "";
   setFieldError("form-error", "");
+  hideDupDialogs();
   formCard.hidden = false;
   fKey.focus();
   formCard.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function closeShortcutForm() {
-  formCard.hidden = true; editingKey = null; setFieldError("form-error", "");
+  formCard.hidden = true;
+  editingKey      = null;
+  setFieldError("form-error", "");
+  hideDupDialogs();
+  // Restore focus to the list item that was active before the form opened
+  renderShortcutList(_preFormFocusKey);
+  _preFormFocusKey = null;
 }
 
+/* ─── Inline duplicate dialogs ───────────────────────────────────────────── */
+
+function hideDupDialogs() {
+  document.getElementById("form-dup-dialog").hidden = true;
+  document.getElementById("form-key-dialog").hidden = true;
+}
+
+let _pendingDupResolve = null;
+
+function showUrlDupDialog(dupEntry, callback) {
+  hideDupDialogs();
+  setFieldError("form-error", "");
+  const dialog   = document.getElementById("form-dup-dialog");
+  const textEl   = document.getElementById("form-dup-text");
+  const btnUpdate = document.getElementById("form-dup-update");
+  const btnDup    = document.getElementById("form-dup-duplicate");
+  const btnCancel = document.getElementById("form-dup-cancel");
+
+  textEl.textContent =
+    `This URL already belongs to "${dupEntry.name}" (key: ${dupEntry.key}). What would you like to do?`;
+  dialog.hidden = false;
+
+  // One-time click handlers — always clean up
+  const cleanup = () => {
+    btnUpdate.onclick = null;
+    btnDup.onclick    = null;
+    btnCancel.onclick = null;
+    dialog.hidden     = true;
+  };
+  btnUpdate.onclick = () => { cleanup(); callback("update"); };
+  btnDup.onclick    = () => { cleanup(); callback("duplicate"); };
+  btnCancel.onclick = () => { cleanup(); callback("cancel"); fUrl.focus(); };
+}
+
+function showKeyDupDialog(dupEntry, dialogId, textId, replaceId, cancelId, callback) {
+  hideDupDialogs();
+  setFieldError("form-error", "");
+  const dialog     = document.getElementById(dialogId);
+  const textEl     = document.getElementById(textId);
+  const btnReplace = document.getElementById(replaceId);
+  const btnCancel  = document.getElementById(cancelId);
+
+  textEl.textContent =
+    `Key "${dupEntry.key}" is already used by "${dupEntry.name}". Replace it with the new entry?`;
+  dialog.hidden = false;
+
+  const cleanup = () => {
+    btnReplace.onclick = null;
+    btnCancel.onclick  = null;
+    dialog.hidden      = true;
+  };
+  btnReplace.onclick = () => { cleanup(); callback("replace"); };
+  btnCancel.onclick  = () => { cleanup(); callback("cancel"); };
+}
+
+/* ─── Save shortcut ──────────────────────────────────────────────────────── */
+
 function handleShortcutSave() {
+  hideDupDialogs();
+
   const key      = fKey.value.trim();
   const name     = fName.value.trim();
   const rawUrl   = fUrl.value.trim();
@@ -321,28 +444,57 @@ function handleShortcutSave() {
   // Key uniqueness check
   const keyDup = shortcuts.find(s => s.key === key && s.key !== editingKey);
   if (keyDup) {
-    setFieldError("form-error", `Key "${key}" is already used by "${keyDup.name}".`);
-    fKey.focus(); return;
+    showKeyDupDialog(
+      keyDup,
+      "form-key-dialog", "form-key-text", "form-key-replace", "form-key-cancel",
+      (choice) => {
+        if (choice === "replace") commitShortcutSave(key, name, url, category, { replaceKey: keyDup.key });
+      }
+    );
+    return;
   }
 
-  // URL duplicate check — warn but allow user to proceed
+  // URL duplicate check
   const normNew = normalizeUrlForCompare(url);
   const urlDup  = shortcuts.find(s => s.key !== editingKey && normalizeUrlForCompare(s.url) === normNew);
   if (urlDup) {
-    const confirmed = window.confirm(
-      `This URL already belongs to "${urlDup.name}" (key: ${urlDup.key}).\n\nAdd another shortcut for the same URL?`
-    );
-    if (!confirmed) { fUrl.focus(); return; }
+    showUrlDupDialog(urlDup, (choice) => {
+      if (choice === "update")    commitShortcutSave(key, name, url, category, { replaceKey: urlDup.key });
+      if (choice === "duplicate") commitShortcutSave(key, name, url, category, {});
+    });
+    return;
   }
 
+  commitShortcutSave(key, name, url, category, {});
+}
+
+function commitShortcutSave(key, name, url, category, { replaceKey } = {}) {
   setFieldError("form-error", "");
   const sc = { key, name, url, category: category || "Other" };
-  const p  = editingKey !== null ? updateShortcut(editingKey, sc) : addShortcut(sc);
+
+  let p;
+  if (replaceKey && replaceKey !== editingKey) {
+    // Replace an existing entry (key collision resolution)
+    p = getShortcuts().then(list => {
+      const filtered = list.filter(s => s.key !== replaceKey && s.key !== editingKey);
+      filtered.push(sc);
+      return saveShortcuts(filtered).then(() => filtered);
+    });
+  } else if (editingKey !== null) {
+    p = updateShortcut(editingKey, sc);
+  } else {
+    p = addShortcut(sc);
+  }
+
   p.then(u => {
     shortcuts = u;
-    renderShortcutList();
+    const savedKey = key;
     closeShortcutForm();
-    showStatus(editingKey !== null ? "Shortcut updated." : "Shortcut added.");
+    // closeShortcutForm restores _preFormFocusKey; override to highlight the saved item
+    renderShortcutList(savedKey);
+    showStatus(editingKey !== null || replaceKey ? "Shortcut saved." : "Shortcut added.");
+  }).catch(err => {
+    showStatus("Save failed: " + err.message, "error");
   });
 }
 
@@ -351,15 +503,9 @@ document.getElementById("btn-cancel").addEventListener("click", closeShortcutFor
 document.getElementById("btn-save").addEventListener("click", handleShortcutSave);
 filterInput.addEventListener("input", renderShortcutList);
 
-// Enter / Escape inside the filter field jump focus into the list.
-// These keys are swallowed by `if (inputFocused) return` in the global
-// handler, so we handle them here with a dedicated listener.
 filterInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
-    // stopPropagation prevents the event from reaching the global handler after
-    // blur() moves focus away, which would otherwise immediately open Edit.
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     const items = shortcutList.querySelectorAll(".shortcut-item[data-key]");
     if (items.length > 0) {
       focusedItemIdx = 0;
@@ -367,12 +513,9 @@ filterInput.addEventListener("keydown", (e) => {
       filterInput.blur();
     }
   } else if (e.key === "Escape") {
-    // stopPropagation prevents the global handler from deselecting the item we
-    // are about to select after clearing the filter.
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     filterInput.value = "";
-    renderShortcutList();   // resets focusedItemIdx = -1 and re-renders all items
+    renderShortcutList();
     const items = shortcutList.querySelectorAll(".shortcut-item[data-key]");
     if (items.length > 0) {
       focusedItemIdx = 0;
@@ -381,16 +524,19 @@ filterInput.addEventListener("keydown", (e) => {
     filterInput.blur();
   }
 });
+
 [fKey, fName, fUrl, fCategory].forEach(el => {
   el.addEventListener("keydown", e => {
-    if (e.key === "Enter") { handleShortcutSave(); }
+    if (e.key === "Enter")  { handleShortcutSave(); }
     else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeShortcutForm(); }
   });
 });
 
 document.getElementById("btn-reset-shortcuts").addEventListener("click", () => {
   if (!window.confirm("Reset all shortcuts to factory defaults? This cannot be undone.")) return;
-  resetShortcuts().then(d => { shortcuts = d; renderShortcutList(); closeShortcutForm(); showStatus("Shortcuts reset."); });
+  resetShortcuts().then(d => {
+    shortcuts = d; renderShortcutList(); closeShortcutForm(); showStatus("Shortcuts reset.");
+  });
 });
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -404,7 +550,7 @@ const efKey           = document.getElementById("ef-key");
 const efName          = document.getElementById("ef-name");
 const efUrl           = document.getElementById("ef-url");
 
-function renderEngineList() {
+function renderEngineList(restoreFocusKey) {
   engineList.innerHTML = "";
   focusedEngineIdx = -1;
   if (engines.length === 0) {
@@ -412,13 +558,22 @@ function renderEngineList() {
     engineList.appendChild(p); return;
   }
   engines.forEach(e => engineList.appendChild(createEngineItem(e)));
+
+  if (restoreFocusKey) {
+    const items = engineList.querySelectorAll(".engine-item[data-key]");
+    const idx   = Array.from(items).findIndex(el => el.dataset.key === restoreFocusKey);
+    if (idx >= 0) {
+      focusedEngineIdx = idx;
+      updateListFocus(items, focusedEngineIdx);
+    }
+  }
 }
 
 function createEngineItem(eng) {
   const item = document.createElement("div");
   item.className = "engine-item";
   item.setAttribute("role", "listitem");
-  item.dataset.key = eng.key;   // needed for keyboard navigation
+  item.dataset.key = eng.key;
 
   const favWrap = document.createElement("div"); favWrap.className = "item-favicon-wrap";
   const fav = document.createElement("img");
@@ -426,7 +581,7 @@ function createEngineItem(eng) {
   fav.src = `https://www.google.com/s2/favicons?sz=32&domain=${encodeURIComponent(eng.domain)}`;
   fav.alt = ""; fav.width = 20; fav.height = 20;
   const favFb = document.createElement("span"); favFb.className = "item-favicon-fallback"; favFb.textContent = eng.name.charAt(0).toUpperCase();
-  fav.addEventListener("error", () => { fav.style.display="none"; favFb.style.display="flex"; });
+  fav.addEventListener("error", () => { fav.style.display = "none"; favFb.style.display = "flex"; });
   favWrap.append(fav, favFb);
 
   const keyEl  = document.createElement("span"); keyEl.className  = "item-key";  keyEl.textContent = eng.key;
@@ -437,41 +592,32 @@ function createEngineItem(eng) {
   const toggleTrack = document.createElement("span"); toggleTrack.className = "toggle-track";
   toggleInput.addEventListener("change", () => {
     eng.enabled = toggleInput.checked;
-    saveSearchEngines(engines).then(() => showStatus(eng.enabled ? `${eng.name} enabled.` : `${eng.name} disabled.`));
+    saveSearchEngines(engines).then(() =>
+      showStatus(eng.enabled ? `${eng.name} enabled.` : `${eng.name} disabled.`)
+    );
   });
   toggleWrap.append(toggleInput, toggleTrack);
 
-  const acts = document.createElement("div"); acts.className = "item-actions";
+  const acts    = document.createElement("div"); acts.className = "item-actions";
   const editBtn = makeIconBtn(editSvg, "Edit", "Edit " + eng.name);
   editBtn.addEventListener("click", () => openEngineEditForm(eng));
   const delBtn  = makeIconBtn(deleteSvg, "Delete", "Delete " + eng.name, true);
-  delBtn.addEventListener("click", () => confirmEngineDelete(eng, acts));
+  delBtn.addEventListener("click", () => doDeleteEngine(eng));
   acts.append(editBtn, delBtn);
 
   item.append(favWrap, keyEl, nameEl, toggleWrap, acts);
   return item;
 }
 
-function confirmEngineDelete(eng, actsEl) {
-  actsEl.innerHTML = "";
-  const wrap = document.createElement("div"); wrap.className = "confirm-wrap";
-  const lbl  = document.createElement("span"); lbl.className = "confirm-label"; lbl.textContent = "Delete?";
-  const yes  = document.createElement("button"); yes.className = "btn-confirm-yes"; yes.textContent = "Yes";
-  yes.addEventListener("click", () => {
-    engines = engines.filter(e => e.key !== eng.key);
-    saveSearchEngines(engines).then(() => { renderEngineList(); showStatus(`"${eng.name}" removed.`); if (editingEngKey === eng.key) closeEngineForm(); });
-  });
-  const no = document.createElement("button"); no.className = "btn-confirm-no"; no.textContent = "No";
-  no.addEventListener("click", () => renderEngineList());
-  wrap.append(lbl, yes, no);
-  actsEl.appendChild(wrap);
-}
-
 function openEngineAddForm() {
   editingEngKey = null;
+  _preEngFormFocusKey = focusedEngineIdx >= 0
+    ? engineList.querySelectorAll(".engine-item[data-key]")[focusedEngineIdx]?.dataset.key ?? null
+    : null;
   engineFormTitle.textContent = "Add search engine";
   efKey.value = ""; efName.value = ""; efUrl.value = "";
   setFieldError("engine-form-error", "");
+  document.getElementById("engine-key-dialog").hidden = true;
   engineFormCard.hidden = false;
   efKey.focus();
   engineFormCard.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -479,19 +625,28 @@ function openEngineAddForm() {
 
 function openEngineEditForm(eng) {
   editingEngKey = eng.key;
+  _preEngFormFocusKey = eng.key;
   engineFormTitle.textContent = "Edit search engine";
   efKey.value = eng.key; efName.value = eng.name; efUrl.value = eng.searchUrl;
   setFieldError("engine-form-error", "");
+  document.getElementById("engine-key-dialog").hidden = true;
   engineFormCard.hidden = false;
   efKey.focus();
   engineFormCard.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function closeEngineForm() {
-  engineFormCard.hidden = true; editingEngKey = null; setFieldError("engine-form-error", "");
+  engineFormCard.hidden = true;
+  editingEngKey         = null;
+  setFieldError("engine-form-error", "");
+  document.getElementById("engine-key-dialog").hidden = true;
+  renderEngineList(_preEngFormFocusKey);
+  _preEngFormFocusKey = null;
 }
 
 function handleEngineSave() {
+  document.getElementById("engine-key-dialog").hidden = true;
+
   const key    = efKey.value.trim();
   const name   = efName.value.trim();
   const rawUrl = efUrl.value.trim();
@@ -499,29 +654,46 @@ function handleEngineSave() {
   if (!key)  { setFieldError("engine-form-error", "Prefix key is required."); return; }
   if (!name) { setFieldError("engine-form-error", "Name is required."); return; }
   if (!rawUrl.includes("{query}")) {
-    setFieldError("engine-form-error", "Search URL must contain {query} as a placeholder.");
-    return;
+    setFieldError("engine-form-error", "Search URL must contain {query} as a placeholder."); return;
   }
 
   const dup = engines.find(e => e.key === key && e.key !== editingEngKey);
-  if (dup) { setFieldError("engine-form-error", `Key "${key}" is already used by "${dup.name}".`); return; }
+  if (dup) {
+    showKeyDupDialog(
+      dup,
+      "engine-key-dialog", "engine-key-text", "engine-key-replace", "engine-key-cancel",
+      (choice) => {
+        if (choice === "replace") commitEngineSave(key, name, rawUrl, { replaceKey: dup.key });
+      }
+    );
+    return;
+  }
 
+  commitEngineSave(key, name, rawUrl, {});
+}
+
+function commitEngineSave(key, name, rawUrl, { replaceKey } = {}) {
   setFieldError("engine-form-error", "");
   let domain = "google.com";
   try { domain = new URL(rawUrl.replace("{query}", "test")).hostname.replace(/^www\./, ""); } catch (_) {}
 
   const eng = { key, name, searchUrl: rawUrl, domain, enabled: true };
-  if (editingEngKey !== null) {
+
+  if (replaceKey && replaceKey !== editingEngKey) {
+    engines = engines.filter(e => e.key !== replaceKey && e.key !== editingEngKey);
+    engines.push(eng);
+  } else if (editingEngKey !== null) {
     const i = engines.findIndex(e => e.key === editingEngKey);
-    if (i !== -1) engines[i] = eng;
+    if (i !== -1) engines[i] = eng; else engines.push(eng);
   } else {
     engines.push(eng);
   }
+
   saveSearchEngines(engines).then(() => {
-    renderEngineList();
     closeEngineForm();
-    showStatus(editingEngKey !== null ? "Engine updated." : "Engine added.");
-  });
+    renderEngineList(key);
+    showStatus(editingEngKey !== null || replaceKey ? "Engine saved." : "Engine added.");
+  }).catch(err => showStatus("Save failed: " + err.message, "error"));
 }
 
 document.getElementById("btn-add-engine").addEventListener("click", openEngineAddForm);
@@ -529,13 +701,15 @@ document.getElementById("btn-engine-save").addEventListener("click", handleEngin
 document.getElementById("btn-engine-cancel").addEventListener("click", closeEngineForm);
 [efKey, efName, efUrl].forEach(el => {
   el.addEventListener("keydown", e => {
-    if (e.key === "Enter") { handleEngineSave(); }
+    if (e.key === "Enter")  { handleEngineSave(); }
     else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeEngineForm(); }
   });
 });
 document.getElementById("btn-reset-engines").addEventListener("click", () => {
   if (!window.confirm("Reset search engines to factory defaults?")) return;
-  resetSearchEngines().then(d => { engines = d; renderEngineList(); closeEngineForm(); showStatus("Search engines reset."); });
+  resetSearchEngines().then(d => {
+    engines = d; renderEngineList(); closeEngineForm(); showStatus("Search engines reset.");
+  });
 });
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -546,7 +720,6 @@ function renderAppearance() {
   // Theme swatches
   document.querySelectorAll(".theme-swatch").forEach(btn => {
     btn.classList.toggle("active", btn.dataset.theme === appearance.theme);
-    // Attach listener only once (idempotent via replacing)
     btn.onclick = () => {
       appearance.theme = btn.dataset.theme;
       applyTheme(appearance.theme, appearance.accent);
@@ -565,6 +738,18 @@ function renderAppearance() {
       saveAppearance(appearance);
     };
   });
+
+  // Glow mode buttons (Off / Static / Pulse)
+  document.querySelectorAll(".glow-mode-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.glowMode === (appearance.glowMode || "off"));
+    btn.onclick = () => {
+      appearance.glowMode = btn.dataset.glowMode;
+      applyGlow(appearance.glowMode, appearance.glowColor, appearance.glowIntensity);
+      renderAppearance();
+      saveAppearance(appearance).then(() => showStatus("Glow mode saved."));
+    };
+  });
+  renderGlowOptions();
 
   // Font size buttons
   document.querySelectorAll(".font-size-btn").forEach(btn => {
@@ -587,11 +772,11 @@ function renderAppearance() {
     };
   });
 
-  // All toggles
+  // Boolean toggles
   const setToggle = (id, key) => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.checked = !!appearance[key];
+    el.checked  = !!appearance[key];
     el.onchange = () => {
       appearance[key] = el.checked;
       saveAppearance(appearance).then(() => showStatus("Setting saved."));
@@ -606,8 +791,36 @@ function renderAppearance() {
   setToggle("toggle-settingsbtn", "showSettingsBtn");
 }
 
-// btn-restore-theme removed from HTML — full reset is now btn-reset-appearance
-// in the Appearance tab (see below in TAB 5 — DATA section)
+function renderGlowOptions() {
+  const opts = document.getElementById("glow-options");
+  if (!opts) return;
+  const active = (appearance.glowMode || "off") !== "off";
+  opts.classList.toggle("glow-options--disabled", !active);
+
+  // Color buttons
+  document.querySelectorAll(".glow-color-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.glowColor === (appearance.glowColor || "blue"));
+    btn.onclick = () => {
+      if (!active) return;
+      appearance.glowColor = btn.dataset.glowColor;
+      applyGlow(appearance.glowMode, appearance.glowColor, appearance.glowIntensity);
+      renderGlowOptions();
+      saveAppearance(appearance);
+    };
+  });
+
+  // Intensity buttons
+  document.querySelectorAll(".glow-intensity-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.intensity === (appearance.glowIntensity || "subtle"));
+    btn.onclick = () => {
+      if (!active) return;
+      appearance.glowIntensity = btn.dataset.intensity;
+      applyGlow(appearance.glowMode, appearance.glowColor, appearance.glowIntensity);
+      renderGlowOptions();
+      saveAppearance(appearance);
+    };
+  });
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
  *  TAB 4 — BOOKMARKS
@@ -616,18 +829,13 @@ function renderAppearance() {
 async function renderBookmarksTab() {
   const toggleEl = document.getElementById("toggle-bookmarks");
   const statusEl = document.getElementById("bookmark-permission-status");
-
   toggleEl.checked = !!appearance.showBookmarks;
-
   const hasPerm = await hasBookmarkPermission();
-
-  // If enabled but permission was revoked, auto-disable
   if (appearance.showBookmarks && !hasPerm) {
     appearance.showBookmarks = false;
     toggleEl.checked = false;
     await saveAppearance(appearance);
   }
-
   function updatePermStatus() {
     if (!appearance.showBookmarks) { statusEl.hidden = true; return; }
     statusEl.hidden    = false;
@@ -635,7 +843,6 @@ async function renderBookmarksTab() {
     statusEl.textContent = "Permission granted — bookmarks appear in search results.";
   }
   updatePermStatus();
-
   toggleEl.onchange = async () => {
     if (toggleEl.checked) {
       const already = await hasBookmarkPermission();
@@ -660,16 +867,151 @@ async function renderBookmarksTab() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
- *  TAB 5 — DATA  (Import / Export / Reset)
+ *  TAB 5 — DATA (Sync · Import / Export · Reset)
  * ══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Chrome Sync ────────────────────────────────────────────────────────── */
+
+async function renderSyncTab() {
+  const toggleEl  = document.getElementById("toggle-sync");
+  const statusEl  = document.getElementById("sync-status");
+  const migration = document.getElementById("sync-migration");
+
+  const enabled = await isSyncEnabled();
+  toggleEl.checked = enabled;
+  updateSyncStatus(enabled, statusEl);
+
+  toggleEl.onchange = async () => {
+    migration.hidden = true;
+    if (toggleEl.checked) {
+      await handleEnableSync(statusEl, migration, toggleEl);
+    } else {
+      await handleDisableSync(statusEl);
+    }
+  };
+}
+
+function updateSyncStatus(enabled, el) {
+  el.hidden    = false;
+  el.className = enabled
+    ? "permission-status permission-status--ok"
+    : "permission-status";
+  el.textContent = enabled
+    ? "Sync active — shortcuts and settings are shared across your Chrome devices."
+    : "Sync off — data stored locally on this device.";
+}
+
+async function handleEnableSync(statusEl, migrationEl, toggleEl) {
+  try {
+    const localData = await readLocalSyncableData();
+    const syncData  = await readSyncData();
+    const hasSyncData  = syncDataHasContent(syncData);
+    const hasLocalData = SYNCABLE_KEYS.some(k => localData[k] !== undefined);
+
+    if (hasSyncData && hasLocalData) {
+      // Both sides have data — ask user what to do
+      const migText = document.getElementById("sync-migration-text");
+      migText.textContent =
+        "Synced data and local data both exist. Which should be kept?";
+      migrationEl.hidden = false;
+
+      const btnUpload   = document.getElementById("sync-btn-upload");
+      const btnDownload = document.getElementById("sync-btn-download");
+      const btnCancel   = document.getElementById("sync-btn-cancel");
+
+      const cleanup = () => {
+        migrationEl.hidden = true;
+        btnUpload.onclick = btnDownload.onclick = btnCancel.onclick = null;
+      };
+
+      btnUpload.onclick = async () => {
+        cleanup();
+        try {
+          await copyLocalToSync(localData);
+          await setSyncEnabledFlag(true);
+          updateSyncStatus(true, statusEl);
+          reloadData();
+          showStatus("Sync enabled — local data uploaded.");
+        } catch (err) {
+          toggleEl.checked = false;
+          statusEl.className = "permission-status permission-status--error";
+          statusEl.textContent = "Sync quota exceeded — data too large. Staying local.";
+          showStatus("Sync quota exceeded.", "error");
+        }
+      };
+
+      btnDownload.onclick = async () => {
+        cleanup();
+        await copySyncToLocal(syncData);
+        await setSyncEnabledFlag(true);
+        updateSyncStatus(true, statusEl);
+        reloadData();
+        showStatus("Sync enabled — synced data applied.");
+      };
+
+      btnCancel.onclick = () => {
+        cleanup();
+        toggleEl.checked = false;
+        statusEl.textContent = "Sync off — data stored locally on this device.";
+        statusEl.className   = "permission-status";
+      };
+    } else if (hasSyncData) {
+      // Only sync has data — use it
+      await copySyncToLocal(syncData);
+      await setSyncEnabledFlag(true);
+      updateSyncStatus(true, statusEl);
+      reloadData();
+      showStatus("Sync enabled — synced data loaded.");
+    } else {
+      // Sync is empty — upload local data
+      try {
+        await copyLocalToSync(localData);
+        await setSyncEnabledFlag(true);
+        updateSyncStatus(true, statusEl);
+        showStatus("Sync enabled — local data uploaded.");
+      } catch (err) {
+        toggleEl.checked = false;
+        statusEl.className   = "permission-status permission-status--error";
+        statusEl.textContent = "Sync quota exceeded — data too large. Staying local.";
+        showStatus("Sync quota exceeded.", "error");
+      }
+    }
+  } catch (err) {
+    toggleEl.checked = false;
+    showStatus("Sync error: " + err.message, "error");
+  }
+}
+
+async function handleDisableSync(statusEl) {
+  // Copy current sync data to local so nothing is lost
+  const syncData = await readSyncData();
+  if (syncDataHasContent(syncData)) {
+    await copySyncToLocal(syncData);
+  }
+  await setSyncEnabledFlag(false);
+  updateSyncStatus(false, statusEl);
+  reloadData();
+  showStatus("Sync disabled — data stored locally.");
+}
+
+/** Re-loads shortcuts, engines, and appearance after a sync migration. */
+async function reloadData() {
+  const [sc, eng, ap] = await Promise.all([getShortcuts(), getSearchEngines(), getAppearance()]);
+  shortcuts  = sc;
+  engines    = eng;
+  appearance = ap;
+  renderShortcutList();
+  renderEngineList();
+  renderAppearance();
+}
+
+/* ─── Export ─────────────────────────────────────────────────────────────── */
 
 document.getElementById("btn-export").addEventListener("click", () => {
   const data = {
     version:       "1",
     exported:      new Date().toISOString(),
-    shortcuts,
-    searchEngines: engines,
-    appearance,
+    shortcuts, searchEngines: engines, appearance,
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url  = URL.createObjectURL(blob);
@@ -681,7 +1023,11 @@ document.getElementById("btn-export").addEventListener("click", () => {
   showStatus("Data exported.");
 });
 
-const importFileInput = document.getElementById("import-file-input");
+/* ─── Import ─────────────────────────────────────────────────────────────── */
+
+const importFileInput   = document.getElementById("import-file-input");
+const importModeDialog  = document.getElementById("import-mode-dialog");
+let   _pendingImportData = null;
 
 document.getElementById("btn-import").addEventListener("click", () => {
   importFileInput.click();
@@ -690,92 +1036,80 @@ document.getElementById("btn-import").addEventListener("click", () => {
 importFileInput.addEventListener("change", async () => {
   const file = importFileInput.files[0];
   if (!file) return;
-  importFileInput.value = "";   // reset so the same file can be re-imported
+  importFileInput.value = "";
 
   let data;
   try {
     data = JSON.parse(await file.text());
   } catch {
-    showStatus("Import failed — file is not valid JSON.", "error");
-    return;
+    showStatus("Import failed — file is not valid JSON.", "error"); return;
   }
 
-  await processImport(data);
-});
-
-async function processImport(data) {
-  if (!data || typeof data !== "object") {
-    showStatus("Import failed — unexpected format.", "error"); return;
-  }
-
-  const errors = [];
-
-  if (data.shortcuts !== undefined) {
-    if (!Array.isArray(data.shortcuts)) {
-      errors.push("shortcuts must be an array");
-    } else {
-      data.shortcuts.forEach((s, i) => {
-        if (!s.key || !s.name || !s.url) errors.push(`shortcuts[${i}]: missing key, name, or url`);
-      });
-    }
-  }
-
-  if (data.searchEngines !== undefined) {
-    if (!Array.isArray(data.searchEngines)) {
-      errors.push("searchEngines must be an array");
-    } else {
-      data.searchEngines.forEach((e, i) => {
-        if (!e.searchUrl?.includes("{query}")) {
-          errors.push(`searchEngines[${i}]: searchUrl must contain {query}`);
-        }
-      });
-    }
-  }
-
+  const errors = validateImportData(data);
   if (errors.length > 0) {
     showStatus("Import failed — " + errors.join("; "), "error"); return;
   }
 
-  const doReplace = window.confirm(
-    "Replace all existing data with the imported data?\n\nOK = Replace everything\nCancel = Merge (imported items with duplicate keys are skipped)"
-  );
+  // Show inline mode-choice dialog instead of window.confirm
+  _pendingImportData = data;
+  importModeDialog.hidden = false;
+});
 
+function validateImportData(data) {
+  if (!data || typeof data !== "object") return ["unexpected format"];
+  const errors = [];
+  if (data.shortcuts !== undefined) {
+    if (!Array.isArray(data.shortcuts)) errors.push("shortcuts must be an array");
+    else data.shortcuts.forEach((s, i) => {
+      if (!s.key || !s.name || !s.url) errors.push(`shortcuts[${i}]: missing key, name, or url`);
+    });
+  }
+  if (data.searchEngines !== undefined) {
+    if (!Array.isArray(data.searchEngines)) errors.push("searchEngines must be an array");
+    else data.searchEngines.forEach((e, i) => {
+      if (!e.searchUrl?.includes("{query}")) errors.push(`searchEngines[${i}]: searchUrl must contain {query}`);
+    });
+  }
+  return errors;
+}
+
+document.getElementById("import-btn-replace").addEventListener("click", async () => {
+  importModeDialog.hidden = true;
+  await processImport(_pendingImportData, true);
+  _pendingImportData = null;
+});
+document.getElementById("import-btn-merge").addEventListener("click", async () => {
+  importModeDialog.hidden = true;
+  await processImport(_pendingImportData, false);
+  _pendingImportData = null;
+});
+document.getElementById("import-btn-cancel").addEventListener("click", () => {
+  importModeDialog.hidden = true;
+  _pendingImportData = null;
+});
+
+async function processImport(data, doReplace) {
   if (doReplace) {
-    if (data.shortcuts) {
-      shortcuts = data.shortcuts;
-      await saveShortcuts(shortcuts);
-    }
-    if (data.searchEngines) {
-      engines = data.searchEngines;
-      await saveSearchEngines(engines);
-    }
-    if (data.appearance) {
-      appearance = { ...appearance, ...data.appearance };
-      await saveAppearance(appearance);
-      applyTheme(appearance.theme, appearance.accent);
-      applyFontSize(appearance.fontSize);
-    }
+    if (data.shortcuts)     { shortcuts = data.shortcuts; await saveShortcuts(shortcuts); }
+    if (data.searchEngines) { engines   = data.searchEngines; await saveSearchEngines(engines); }
+    if (data.appearance)    { appearance = { ...appearance, ...data.appearance }; await saveAppearance(appearance); applyTheme(appearance.theme, appearance.accent); applyFontSize(appearance.fontSize); applyGlow(appearance.glowMode, appearance.glowColor, appearance.glowIntensity); }
   } else {
-    // Merge — skip duplicates
     if (data.shortcuts) {
       const existingKeys = new Set(shortcuts.map(s => s.key));
-      const newItems = data.shortcuts.filter(s => !existingKeys.has(s.key));
-      shortcuts = [...shortcuts, ...newItems];
+      shortcuts = [...shortcuts, ...data.shortcuts.filter(s => !existingKeys.has(s.key))];
       await saveShortcuts(shortcuts);
     }
     if (data.searchEngines) {
       const existingKeys = new Set(engines.map(e => e.key));
-      const newItems = data.searchEngines.filter(e => !existingKeys.has(e.key));
-      engines = [...engines, ...newItems];
+      engines = [...engines, ...data.searchEngines.filter(e => !existingKeys.has(e.key))];
       await saveSearchEngines(engines);
     }
   }
-
-  renderShortcutList();
-  renderEngineList();
-  renderAppearance();
+  renderShortcutList(); renderEngineList(); renderAppearance();
   showStatus("Import complete.");
 }
+
+/* ─── Reset buttons ──────────────────────────────────────────────────────── */
 
 document.getElementById("btn-reset-usage").addEventListener("click", () => {
   if (!window.confirm("Reset all usage data? The most-visited tile order will revert to default.")) return;
@@ -788,14 +1122,13 @@ document.getElementById("btn-reset-appearance").addEventListener("click", () => 
     theme: "graphite", accent: "blue", fontSize: "medium",
     showTime: true, showDate: true, showWeather: false, tempUnit: "C",
     showHints: true, showMostVisited: true, showVisitCounts: false, showSettingsBtn: true,
+    glowMode: "off", glowColor: "blue", glowIntensity: "subtle",
   };
   appearance = { ...appearance, ...defaults };
   applyTheme(appearance.theme, appearance.accent);
   applyFontSize(appearance.fontSize);
-  saveAppearance(appearance).then(() => {
-    renderAppearance();
-    showStatus("Appearance settings reset.");
-  });
+  applyGlow("off", "blue", "subtle");
+  saveAppearance(appearance).then(() => { renderAppearance(); showStatus("Appearance settings reset."); });
 });
 
 /* ─── Icon SVG helpers ───────────────────────────────────────────────────── */
@@ -806,7 +1139,7 @@ const deleteSvg = `<svg viewBox="0 0 16 16" fill="none"><path d="M2.5 4.5h11M6 4
 function makeIconBtn(svg, title, ariaLabel, isDanger = false) {
   const btn = document.createElement("button");
   btn.className = isDanger ? "btn-icon btn-icon--danger" : "btn-icon";
-  btn.title = title;
+  btn.title     = title;
   btn.setAttribute("aria-label", ariaLabel);
   btn.innerHTML = svg;
   return btn;
@@ -825,9 +1158,11 @@ Promise.all([
 
   applyTheme(ap.theme, ap.accent);
   applyFontSize(ap.fontSize || "medium");
+  applyGlow(ap.glowMode, ap.glowColor, ap.glowIntensity);
 
   renderShortcutList();
   renderEngineList();
   renderAppearance();
   renderBookmarksTab();
+  renderSyncTab();
 });

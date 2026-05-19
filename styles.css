@@ -43,6 +43,9 @@
    * (62vh) to show more. The CSS is the only limit — JS has no row cap.
    */
   --results-max-height: clamp(150px, calc(62vh - 160px), 350px);
+  /* Ambient glow — set by themes.js#applyGlow via data-glow-mode attribute */
+  --glow-color-rgb: 10, 132, 255;
+  --glow-opacity:   0.09;
 }
 
 /* ─── Document ───────────────────────────────────────────────────────────── */
@@ -59,14 +62,86 @@ body {
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /*
-   * No flex centering here. The launcher uses absolute positioning so
-   * it stays at a fixed vertical position regardless of results count.
-   */
   position: relative;
   background-image:
     radial-gradient(ellipse 80% 60% at 50% 0%, rgba(44, 44, 46, 0.6) 0%, transparent 70%);
 }
+
+/* ─── Ambient Glow ───────────────────────────────────────────────────────────
+ *
+ * A dedicated <div class="ambient-glow"> sits as the first child of <body>.
+ * It is hidden (display:none) by default.  CSS attribute selectors on :root
+ * [data-glow-mode] make it visible and optionally animated — zero JS on every
+ * paint, zero cost when mode is "off".
+ *
+ * Tuning guide:
+ *   Position  → top / left / transform in .ambient-glow
+ *   Size      → width / height in .ambient-glow
+ *   Softness  → filter: blur(Xpx) in .ambient-glow  (48–72 px is a good range)
+ *   Intensity → --glow-opacity via themes.js GLOW_INTENSITY object
+ *   Color     → --glow-color-rgb via themes.js GLOW_COLORS object
+ *   Pulse dur → animation-duration in the :root[data-glow-mode="pulse"] rule
+ *
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+.ambient-glow {
+  position: fixed;
+  left: 50%;
+  top: 38%;                            /* ~where the search bar lands */
+  width: min(820px, 82vw);
+  height: 320px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(var(--glow-color-rgb), var(--glow-opacity))                0%,
+    rgba(var(--glow-color-rgb), calc(var(--glow-opacity) * 0.4))   50%,
+    transparent                                                     75%
+  );
+  filter: blur(56px);
+  display: none;                       /* hidden when mode = "off" */
+  will-change: opacity, transform;     /* hint compositor for pulse */
+}
+
+/* ── Static mode ─────────────────────────────────────────────────────────── */
+
+:root[data-glow-mode="static"] .ambient-glow {
+  display: block;
+}
+
+/* ── Pulse mode ──────────────────────────────────────────────────────────── */
+
+:root[data-glow-mode="pulse"] .ambient-glow {
+  display: block;
+  animation: ambientGlowPulse 12s ease-in-out infinite;
+}
+
+@keyframes ambientGlowPulse {
+  0%, 100% {
+    opacity: 0.78;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.04);
+  }
+}
+
+/* ── Accessibility ───────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-glow {
+    animation: none !important;
+  }
+}
+
+/* ── Content z-index — must sit above the glow layer (z-index: 0) ────────── */
+/* Only z-index is added here; position values are set in the rules below. */
+
+.launcher     { z-index: 1; }
+.clock-widget { z-index: 1; }
 
 /* ─── Weather Widget (inside clock-widget) ───────────────────────────────── */
 
@@ -299,13 +374,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  /*
-   * clamp keeps results within the viewport above the fixed keyboard hints.
-   * Formula: 68vh - 200px ≈ viewport height minus the space consumed by the
-   * launcher top offset (~32%), the search/greeting above results (~120px),
-   * and the fixed hints at the bottom (~80px). This prevents results from
-   * ever sliding behind the hints on any common screen size.
-   */
   max-height: var(--results-max-height);
   overflow-y: auto;
   scrollbar-width: thin;
@@ -339,12 +407,6 @@ body {
   transition:
     background var(--transition),
     box-shadow var(--transition);
-  /*
-   * IMPORTANT: Do NOT set opacity: 0 here.
-   * The animation uses fill-mode: both, so the `from` keyframe handles the
-   * initial hidden state. If the animation doesn't run for any reason
-   * (Chrome extension quirk, prefers-reduced-motion), items stay visible.
-   */
   animation: fadeItem var(--transition-slow) ease-out both;
   animation-delay: calc(var(--item-index, 0) * 25ms);
 }
@@ -366,19 +428,12 @@ body {
 
 .result-item[aria-selected="true"] {
   background: var(--surface-active);
-  /* Outer ring + left accent bar — classic macOS sidebar selection pattern */
   box-shadow:
     inset 0 0 0 1px rgba(10, 132, 255, 0.28),
     inset 3px 0 0 rgba(10, 132, 255, 0.65);
 }
 
-/* ─── Site Icons (shared between result items and grid cards) ────────────── */
-
-/*
- * .site-icon is the wrapper. Sizing is controlled per-context (.result-icon,
- * .grid-card-icon). Swap favicon URLs for local assets by changing .icon-img
- * src in JS — the layout stays identical.
- */
+/* ─── Site Icons ─────────────────────────────────────────────────────────── */
 
 .site-icon {
   display: flex;
@@ -401,18 +456,15 @@ body {
   border-radius: 4px;
 }
 
-/* Favicon <img> */
 .icon-img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   border-radius: inherit;
-  /* Avoid blurry 16px favicons when scaled up */
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
 }
 
-/* Emoji icon */
 .icon-emoji {
   font-size: 16px;
   line-height: 1;
@@ -423,7 +475,6 @@ body {
   height: 100%;
 }
 
-/* Fallback: first letter in accent circle — shown when favicon fails to load */
 .icon-fallback {
   width: 100%;
   height: 100%;
@@ -434,7 +485,6 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0;
-  /* hidden by default; JS sets display:flex on img error */
   display: none;
   align-items: center;
   justify-content: center;
@@ -460,8 +510,6 @@ body {
   min-width: 24px;
 }
 
-/* Search-fallback key badge — replaces the shortcut-key accent style with a
-   neutral magnifying-glass badge so it doesn't look like a typo-able key */
 .result-key--search {
   background: rgba(255, 255, 255, 0.06);
   border-color: var(--border);
@@ -518,7 +566,7 @@ body {
   line-height: 1.5;
 }
 
-/* Matched-text highlights inside name / key */
+/* Matched-text highlights */
 
 .result-name mark,
 .result-key mark {
@@ -541,18 +589,22 @@ body {
   display: none;
 }
 
-/* ─── Default Grid ───────────────────────────────────────────────────────── */
+/* ─── Default Grid (most visited tiles) ─────────────────────────────────────
+ *
+ * Uses minmax(0, 1fr) so all columns are strictly equal — prevents a card with
+ * a long title from stretching its column on wide displays.
+ * 3 × 2 layout on all screens ≥ 600 px; 2 × 3 on smaller; 1 col on very small.
+ *
+ * ─────────────────────────────────────────────────────────────────────────── */
 
 .default-grid {
   margin-top: 20px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
 .default-grid.hidden {
-  /* display: none collapses the space so the launcher doesn't grow when
-     the grid is hidden during a search (no invisible placeholder height). */
   display: none;
 }
 
@@ -575,10 +627,8 @@ body {
   -webkit-backdrop-filter: blur(16px);
   text-align: left;
   text-decoration: none;
-  /*
-   * Same fix as .result-item — no static opacity: 0.
-   * Animation handles the fade-in via fill-mode: both.
-   */
+  /* Prevent card from exceeding its grid column */
+  min-width: 0;
   animation: fadeItem var(--transition-slow) ease-out both;
   animation-delay: calc(var(--item-index, 0) * 40ms);
 }
@@ -607,9 +657,13 @@ body {
   font-weight: 500;
   color: var(--text-primary);
   letter-spacing: -0.01em;
-  white-space: nowrap;
+  /* Clamp to 2 lines; ellipsis on overflow */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-word;
+  line-height: 1.35;
 }
 
 .grid-card-category {
@@ -639,14 +693,6 @@ body {
 /* ─── Keyboard Hints ─────────────────────────────────────────────────────── */
 
 .kbd-hints {
-  /*
-   * Fixed at the bottom of the viewport so hints are always visible and
-   * never shift with search results. bottom: 48px leaves breathing room
-   * above Chrome's own new-tab footer UI ("Chrome anpassen" bar).
-   * z-index: 100 keeps hints on top of any overflowing content.
-   * The launcher's padding-bottom: 80px ensures the default grid stops
-   * above this area so nothing is hidden behind the hints.
-   */
   position: fixed;
   bottom: 48px;
   left: 50%;
@@ -691,13 +737,7 @@ body {
   font-size: 13px;
 }
 
-/* ─── Settings Button ────────────────────────────────────────────────────────
- *
- * Fixed bottom-right alongside the kbd-hints. The same bottom value keeps
- * everything on one visual baseline. pointer-events: all overrides the parent's
- * none so the button remains clickable.
- *
- * ─────────────────────────────────────────────────────────────────────────── */
+/* ─── Settings Button ────────────────────────────────────────────────────── */
 
 .settings-btn {
   position: fixed;
@@ -713,7 +753,7 @@ body {
   border-radius: var(--radius-sm);
   cursor: pointer;
   color: var(--text-muted);
-  pointer-events: all;   /* parent .kbd-hints has pointer-events:none; this is a sibling so no issue */
+  pointer-events: all;
   transition: color var(--transition), background var(--transition);
   padding: 0;
   z-index: 100;
@@ -740,11 +780,11 @@ body {
 
 @media (max-width: 600px) {
   .launcher {
-    padding: 0 16px 72px; /* maintain bottom gap above fixed hints */
+    padding: 0 16px 72px;
   }
 
   .kbd-hints {
-    bottom: 36px; /* slightly closer to bottom on small screens */
+    bottom: 36px;
     padding: 0 16px;
   }
 
@@ -759,7 +799,7 @@ body {
   }
 
   .default-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .clock-widget {
@@ -778,7 +818,7 @@ body {
 
 @media (max-width: 380px) {
   .default-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

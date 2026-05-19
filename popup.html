@@ -43,6 +43,25 @@
 
       <p id="p-error" class="field-error" hidden></p>
 
+      <!-- Inline URL-duplicate dialog -->
+      <div id="p-dup-dialog" class="dup-dialog" hidden>
+        <p id="p-dup-text" class="dup-dialog-text"></p>
+        <div class="dup-dialog-actions">
+          <button id="p-dup-update"    class="btn-action">Update existing</button>
+          <button id="p-dup-duplicate" class="btn-action btn-action--ghost">Save as duplicate</button>
+          <button id="p-dup-cancel"    class="btn-action btn-action--ghost">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Inline key-conflict dialog -->
+      <div id="p-key-dialog" class="dup-dialog dup-dialog--warn" hidden>
+        <p id="p-key-text" class="dup-dialog-text"></p>
+        <div class="dup-dialog-actions">
+          <button id="p-key-replace" class="btn-action">Replace existing</button>
+          <button id="p-key-cancel"  class="btn-action btn-action--ghost">Cancel</button>
+        </div>
+      </div>
+
       <button id="btn-add" class="btn-add">Add to LaunchTab</button>
 
       <a id="settings-link" href="options.html" target="_blank" class="settings-link">

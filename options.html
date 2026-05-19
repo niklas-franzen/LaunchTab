@@ -43,7 +43,6 @@
       <div id="shortcut-list" class="shortcut-list" role="list"
            aria-label="Shortcuts list — use arrow keys to navigate"></div>
 
-      <!-- Keyboard hints — same visual style as main-page hints -->
       <div class="settings-kbd-hints" id="shortcuts-kbd-hints">
         <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
         <span class="settings-hints-sep">·</span>
@@ -53,7 +52,7 @@
         <span class="settings-hints-sep">·</span>
         <span><kbd>Del</kbd> remove</span>
         <span class="settings-hints-sep">·</span>
-        <span><kbd>Esc</kbd> deselect</span>
+        <span><kbd>Esc</kbd> deselect / close form</span>
         <span class="settings-hints-sep">·</span>
         <span><kbd>⌘S</kbd> save</span>
       </div>
@@ -83,11 +82,31 @@
           </label>
         </div>
         <p id="form-error" class="form-error" hidden></p>
+
+        <!-- Inline duplicate dialog (URL conflict) -->
+        <div id="form-dup-dialog" class="dup-dialog" hidden>
+          <p id="form-dup-text" class="dup-dialog-text"></p>
+          <div class="dup-dialog-actions">
+            <button id="form-dup-update"    class="btn btn-primary btn-sm">Update existing</button>
+            <button id="form-dup-duplicate" class="btn btn-ghost   btn-sm">Save as duplicate</button>
+            <button id="form-dup-cancel"    class="btn btn-ghost   btn-sm">Cancel</button>
+          </div>
+        </div>
+
+        <!-- Inline key-conflict dialog -->
+        <div id="form-key-dialog" class="dup-dialog dup-dialog--warn" hidden>
+          <p id="form-key-text" class="dup-dialog-text"></p>
+          <div class="dup-dialog-actions">
+            <button id="form-key-replace" class="btn btn-primary btn-sm">Replace existing</button>
+            <button id="form-key-cancel"  class="btn btn-ghost   btn-sm">Cancel</button>
+          </div>
+        </div>
+
         <div class="form-actions">
           <button id="btn-save" class="btn btn-primary">Save</button>
           <button id="btn-cancel" class="btn btn-ghost">Cancel</button>
         </div>
-        <p class="form-hint">Tip: <kbd>Cmd/Ctrl+S</kbd> saves the form.</p>
+        <p class="form-hint">Tip: <kbd>Cmd/Ctrl+S</kbd> saves · <kbd>Esc</kbd> cancels</p>
       </div>
 
     </div><!-- /tab-shortcuts -->
@@ -112,7 +131,7 @@
         <span class="settings-hints-sep">·</span>
         <span><kbd>Del</kbd> remove</span>
         <span class="settings-hints-sep">·</span>
-        <span><kbd>Esc</kbd> deselect</span>
+        <span><kbd>Esc</kbd> deselect / close form</span>
         <span class="settings-hints-sep">·</span>
         <span><kbd>⌘S</kbd> save</span>
       </div>
@@ -140,10 +159,21 @@
           </label>
         </div>
         <p id="engine-form-error" class="form-error" hidden></p>
+
+        <!-- Inline key-conflict dialog for engines -->
+        <div id="engine-key-dialog" class="dup-dialog dup-dialog--warn" hidden>
+          <p id="engine-key-text" class="dup-dialog-text"></p>
+          <div class="dup-dialog-actions">
+            <button id="engine-key-replace" class="btn btn-primary btn-sm">Replace existing</button>
+            <button id="engine-key-cancel"  class="btn btn-ghost   btn-sm">Cancel</button>
+          </div>
+        </div>
+
         <div class="form-actions">
           <button id="btn-engine-save" class="btn btn-primary">Save</button>
           <button id="btn-engine-cancel" class="btn btn-ghost">Cancel</button>
         </div>
+        <p class="form-hint">Tip: <kbd>Cmd/Ctrl+S</kbd> saves · <kbd>Esc</kbd> cancels</p>
       </div>
 
     </div><!-- /tab-engines -->
@@ -186,6 +216,40 @@
           <button class="accent-swatch" data-accent="orange"  style="background:#ff9f0a" title="Orange"  aria-label="Orange"></button>
           <button class="accent-swatch" data-accent="pink"    style="background:#ff375f" title="Pink"    aria-label="Pink"></button>
           <button class="accent-swatch" data-accent="neutral" style="background:#888"    title="Neutral" aria-label="Neutral"></button>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h2 class="section-title">Ambient Glow</h2>
+        <div class="toggle-row">
+          <div class="toggle-text">
+            <span class="toggle-label">Mode</span>
+            <span class="toggle-desc">Soft radial light behind the search bar. Static is always visible; Pulse breathes slowly every ~12 s.</span>
+          </div>
+          <div class="glow-mode-btns">
+            <button class="glow-mode-btn" data-glow-mode="off">Off</button>
+            <button class="glow-mode-btn" data-glow-mode="static">Static</button>
+            <button class="glow-mode-btn" data-glow-mode="pulse">Pulse</button>
+          </div>
+        </div>
+        <div id="glow-options" class="glow-options">
+          <div class="glow-row">
+            <span class="toggle-label glow-row-label">Color</span>
+            <div class="glow-color-btns">
+              <button class="glow-color-btn" data-glow-color="blue"    title="Blue"   ></button>
+              <button class="glow-color-btn" data-glow-color="purple"  title="Purple" ></button>
+              <button class="glow-color-btn" data-glow-color="green"   title="Green"  ></button>
+              <button class="glow-color-btn" data-glow-color="neutral" title="Neutral"></button>
+            </div>
+          </div>
+          <div class="glow-row">
+            <span class="toggle-label glow-row-label">Intensity</span>
+            <div class="glow-intensity-btns">
+              <button class="glow-intensity-btn" data-intensity="subtle">Subtle</button>
+              <button class="glow-intensity-btn" data-intensity="medium">Medium</button>
+              <button class="glow-intensity-btn" data-intensity="strong">Strong</button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -255,7 +319,7 @@
         <div class="action-row">
           <div class="action-text">
             <span class="toggle-label">Restore default appearance</span>
-            <span class="toggle-desc">Resets theme, accent color, font size, and all display toggles to defaults.</span>
+            <span class="toggle-desc">Resets theme, accent color, font size, glow, and all display toggles to defaults.</span>
           </div>
           <button id="btn-reset-appearance" class="btn btn-ghost btn-sm">Reset</button>
         </div>
@@ -284,6 +348,26 @@
     <div id="tab-data" class="tab-panel" role="tabpanel">
 
       <section class="settings-section">
+        <h2 class="section-title">Sync across Chrome devices</h2>
+        <div class="toggle-row">
+          <div class="toggle-text">
+            <span class="toggle-label">Sync shortcuts &amp; settings</span>
+            <span class="toggle-desc">Uses Chrome Sync to share shortcuts, search engines, and appearance settings between your Chrome devices. Requires Chrome to be signed in with Sync enabled. Usage data and weather cache remain local.</span>
+          </div>
+          <label class="toggle-wrap"><input type="checkbox" id="toggle-sync" class="toggle-input"><span class="toggle-track"></span></label>
+        </div>
+        <div id="sync-status" class="permission-status" hidden></div>
+        <div id="sync-migration" class="sync-migration" hidden>
+          <p id="sync-migration-text" class="sync-migration-text"></p>
+          <div class="sync-migration-actions">
+            <button id="sync-btn-upload"   class="btn btn-primary btn-sm">Upload local data to sync</button>
+            <button id="sync-btn-download" class="btn btn-ghost   btn-sm">Use synced data</button>
+            <button id="sync-btn-cancel"   class="btn btn-ghost   btn-sm">Cancel</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-section">
         <h2 class="section-title">Export</h2>
         <p class="section-desc">Download all your shortcuts, search engines, and appearance settings as a JSON file.</p>
         <button id="btn-export" class="btn btn-ghost">Export JSON</button>
@@ -293,8 +377,16 @@
         <h2 class="section-title">Import</h2>
         <p class="section-desc">Import from a LaunchTab export file. You can choose to replace all existing data or merge (duplicate keys are skipped).</p>
         <button id="btn-import" class="btn btn-ghost">Import JSON</button>
-        <!-- Hidden file input — triggered programmatically from the button above -->
         <input id="import-file-input" type="file" accept=".json,application/json" hidden>
+        <!-- Inline import mode dialog -->
+        <div id="import-mode-dialog" class="dup-dialog" hidden>
+          <p class="dup-dialog-text">How should the imported data be applied?</p>
+          <div class="dup-dialog-actions">
+            <button id="import-btn-replace" class="btn btn-primary btn-sm">Replace all data</button>
+            <button id="import-btn-merge"   class="btn btn-ghost   btn-sm">Merge (keep existing)</button>
+            <button id="import-btn-cancel"  class="btn btn-ghost   btn-sm">Cancel</button>
+          </div>
+        </div>
       </section>
 
       <section class="settings-section">
@@ -315,7 +407,7 @@
 
       <section class="settings-section">
         <h2 class="section-title">LaunchTab</h2>
-        <p class="section-desc about-version">Version 0.4.0</p>
+        <p class="section-desc about-version">Version 0.6.0</p>
         <p class="section-desc">A minimal, Apple-inspired fuzzy shortcut launcher for your new tab.</p>
         <div class="about-links">
           <a href="https://github.com/YOUR_GITHUB/launchtab" target="_blank"
@@ -334,6 +426,7 @@
 
     </div><!-- /tab-about -->
 
+    <!-- Status / undo toast — sticks to bottom of page content -->
     <div id="status-banner" class="status-banner" hidden></div>
 
   </div><!-- /page -->

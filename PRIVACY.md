@@ -1,6 +1,6 @@
 # LaunchTab — Privacy Policy
 
-*Last updated: 2025*
+*Last updated: 2026*
 
 LaunchTab is a Chrome browser extension. This document explains clearly what data the extension accesses, stores, and transmits.
 
@@ -8,16 +8,32 @@ LaunchTab is a Chrome browser extension. This document explains clearly what dat
 
 ## Data collected and stored
 
-All data is stored **locally on your device** using Chrome's `chrome.storage.local` API. Nothing is transmitted to external servers operated by us.
+By default, all data is stored **locally on your device** using Chrome's `chrome.storage.local` API. If you opt into Chrome Sync (see below), selected data is additionally stored in `chrome.storage.sync`.
 
 | What | Where | Why |
 |------|-------|-----|
-| Shortcuts (key, name, URL, category) | `chrome.storage.local` | Core launcher functionality |
-| Search engine definitions | `chrome.storage.local` | Search prefix feature |
-| Appearance settings (theme, accent, toggles) | `chrome.storage.local` | Personalised look & feel |
-| Usage counts per shortcut | `chrome.storage.local` | Sort "most visited" tiles; no counts shown to the user |
-| Weather cache (temperature, city, timestamp) | `chrome.storage.local` | Avoid repeated API calls; expires after 30 minutes |
-| Theme mirror (theme name, accent name) | `localStorage` | Instant no-flash theme on page load |
+| Shortcuts (key, name, URL, category) | `chrome.storage.local` or `.sync` | Core launcher functionality |
+| Search engine definitions | `chrome.storage.local` or `.sync` | Search prefix feature |
+| Appearance settings (theme, accent, toggles) | `chrome.storage.local` or `.sync` | Personalised look & feel |
+| Usage counts per shortcut | `chrome.storage.local` only | Sort "most visited" tiles; never synced |
+| Weather cache (temperature, city, timestamp) | `chrome.storage.local` only | Avoid repeated API calls; expires after 30 minutes; never synced |
+| Theme mirror (theme name, accent name, glow) | `localStorage` | Instant no-flash theme on page load |
+
+---
+
+## Chrome Sync (optional)
+
+Settings → Data → "Sync shortcuts & settings" lets you sync shortcuts, search engines, and appearance settings between Chrome devices.
+
+When Sync is enabled:
+- Shortcuts, search engines, and appearance settings are written to `chrome.storage.sync`.
+- Chrome transmits this data between your devices via your Google Account, subject to Google's Privacy Policy.
+- **LaunchTab does not operate its own sync servers** — the data flows directly through Chrome's built-in sync infrastructure.
+- **Usage data, weather cache, and location data are never synced** — they remain device-local at all times.
+
+When Sync is disabled (default):
+- All data stays in `chrome.storage.local` on the current device only.
+- Any previously synced data remains in Chrome Sync until you sign out of Chrome or clear it manually.
 
 ---
 
@@ -35,7 +51,7 @@ All data is stored **locally on your device** using Chrome's `chrome.storage.loc
 
 | Permission | Reason |
 |-----------|--------|
-| `storage` | Save shortcuts, settings, and usage data locally |
+| `storage` | Save shortcuts, settings, and usage data locally; optionally sync via Chrome Sync |
 | `activeTab` | Read the current tab URL and title when you click the toolbar icon |
 | `bookmarks` *(optional)* | Search Chrome bookmarks — only requested when you explicitly enable the feature |
 
@@ -65,6 +81,7 @@ If you deny location permission or disable weather, no location data is accessed
 | Google Favicon API | Shortcut / engine icons | Domain name only |
 | Open-Meteo | Weather temperature | Approximate GPS coordinates |
 | Nominatim (OSM) | City name | Approximate GPS coordinates |
+| Chrome Sync (Google) | Device sync (opt-in only) | Shortcuts, search engines, appearance settings |
 
 LaunchTab loads **no external JavaScript**. All JS runs from within the extension bundle.
 
@@ -72,7 +89,9 @@ LaunchTab loads **no external JavaScript**. All JS runs from within the extensio
 
 ## Data deletion
 
-Remove the extension via `chrome://extensions` to delete all stored data. Use **Reset to defaults** buttons in Settings to reset individual data sets without uninstalling.
+Remove the extension via `chrome://extensions` to delete all locally stored data. Use **Reset to defaults** buttons in Settings to reset individual data sets without uninstalling.
+
+To remove synced data: disable Sync in Settings → Data, then sign out of Chrome or clear Chrome Sync data via your Google Account settings.
 
 ---
 

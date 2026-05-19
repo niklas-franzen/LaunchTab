@@ -3,7 +3,7 @@
   "name": "LaunchTab",
   "short_name": "LaunchTab",
   "description": "A minimal Apple-inspired fuzzy shortcut launcher for your new tab.",
-  "version": "0.3.0",
+  "version": "0.6.0",
   "chrome_url_overrides": {
     "newtab": "newtab.html"
   },

@@ -133,8 +133,8 @@ const GLOW_INTENSITY = {
 /**
  * Applies or removes the ambient search glow.
  *
- * mode     "off" | "static" | "pulse"
- * color    "blue" | "purple" | "green" | "neutral"
+ * mode      "off" | "static" | "pulse" | "dynamic"
+ * color     "blue" | "purple" | "green" | "neutral"
  * intensity "subtle" | "medium" | "strong"
  *
  * Sets CSS custom properties + data-glow-mode on :root.
@@ -158,6 +158,19 @@ function applyGlow(mode, color, intensity) {
   } catch (_) {}
 }
 
+/* ─── Reduced Motion Override ────────────────────────────────────────────── */
+
+/**
+ * Sets data-respect-reduced-motion on :root.
+ * "true"  → LaunchTab respects prefers-reduced-motion (default, accessible).
+ * "false" → LaunchTab ignores the OS preference and always allows animations.
+ */
+function applyReducedMotionOverride(respect) {
+  const val = (respect !== false) ? "true" : "false";
+  document.documentElement.dataset.respectReducedMotion = val;
+  try { localStorage.setItem("lt_respect_reduced_motion", val); } catch (_) {}
+}
+
 // Apply all visual settings immediately from localStorage — no FOUC
 (function applyFromLocalStorage() {
   const t  = localStorage.getItem("lt_theme")         || "graphite";
@@ -170,10 +183,37 @@ function applyGlow(mode, color, intensity) {
     const legacyEnabled = localStorage.getItem("lt_glow_enabled");
     gm = legacyEnabled === "true" ? "static" : "off";
   }
-  const gc = localStorage.getItem("lt_glow_color")    || "blue";
-  const gi = localStorage.getItem("lt_glow_intensity")|| "subtle";
+  const gc  = localStorage.getItem("lt_glow_color")             || "blue";
+  const gi  = localStorage.getItem("lt_glow_intensity")         || "subtle";
+  // null → not yet persisted (first load) → default true (safe/accessible)
+  const rrm = localStorage.getItem("lt_respect_reduced_motion") !== "false";
 
   applyTheme(t, a);
   applyFontSize(s);
   applyGlow(gm, gc, gi);
+  applyReducedMotionOverride(rrm);
 }());
+
+/* ─── Debug helpers ──────────────────────────────────────────────────────── */
+
+window.LaunchTabDebug = {
+  dumpMotionState() {
+    const root          = document.documentElement;
+    const sysReduced    = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const respectSet    = root.dataset.respectReducedMotion;
+    const respectActive = respectSet !== "false";
+    const glowEl        = document.querySelector(".ambient-glow");
+    const glowAnim      = glowEl ? getComputedStyle(glowEl).animationName             : "N/A (no element)";
+    const beforeAnim    = glowEl ? getComputedStyle(glowEl, "::before").animationName : "N/A (no element)";
+    const afterAnim     = glowEl ? getComputedStyle(glowEl, "::after").animationName  : "N/A (no element)";
+    console.table({
+      systemReducedMotion:     sysReduced,
+      respectReducedMotion:    respectActive,
+      effectiveMotionAllowed:  !sysReduced || !respectActive,
+      glowMode:                root.dataset.glowMode  || "off",
+      "animation(.ambient-glow)":        glowAnim,
+      "animation(.ambient-glow::before)": beforeAnim,
+      "animation(.ambient-glow::after)":  afterAnim,
+    });
+  },
+};

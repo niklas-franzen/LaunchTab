@@ -624,6 +624,7 @@ Promise.all([
   applyTheme(appearance.theme, appearance.accent);
   applyFontSize(appearance.fontSize);
   applyGlow(appearance.glowMode, appearance.glowColor, appearance.glowIntensity);
+  applyReducedMotionOverride(appearance.respectReducedMotion);
 
   // Clock / weather visibility
   const clockEl = document.querySelector(".clock-widget");
@@ -681,6 +682,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
         applyTheme(APPEARANCE.theme, APPEARANCE.accent);
         applyFontSize(APPEARANCE.fontSize);
         applyGlow(APPEARANCE.glowMode, APPEARANCE.glowColor, APPEARANCE.glowIntensity);
+        applyReducedMotionOverride(APPEARANCE.respectReducedMotion);
 
         const clockEl = document.querySelector(".clock-widget");
         if (clockEl) {

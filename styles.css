@@ -218,11 +218,13 @@ body {
 }
 
 /* ── Accessibility — no animation when reduced motion preferred ──────────── */
+/* Conditional on data-respect-reduced-motion="true" (the default).           */
+/* Set to "false" in Appearance → Motion to allow glow even with OS setting.  */
 
 @media (prefers-reduced-motion: reduce) {
-  .ambient-glow,
-  .ambient-glow::before,
-  .ambient-glow::after {
+  :root[data-respect-reduced-motion="true"] .ambient-glow,
+  :root[data-respect-reduced-motion="true"] .ambient-glow::before,
+  :root[data-respect-reduced-motion="true"] .ambient-glow::after {
     animation: none !important;
     will-change: auto;
   }
@@ -913,11 +915,12 @@ body {
 }
 
 /* ─── Reduced Motion ─────────────────────────────────────────────────────── */
+/* Only fires when the user respects the OS setting (data-respect-reduced-motion="true"). */
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  :root[data-respect-reduced-motion="true"] *,
+  :root[data-respect-reduced-motion="true"] *::before,
+  :root[data-respect-reduced-motion="true"] *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }

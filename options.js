@@ -839,6 +839,27 @@ function renderAppearance() {
   setToggle("toggle-mostvisited", "showMostVisited");
   setToggle("toggle-visitcounts", "showVisitCounts");
   setToggle("toggle-settingsbtn", "showSettingsBtn");
+
+  // Respect Reduced Motion toggle (needs applyReducedMotionOverride side-effect)
+  const rrm = document.getElementById("toggle-respect-reduced-motion");
+  if (rrm) {
+    rrm.checked  = appearance.respectReducedMotion !== false;
+    rrm.onchange = () => {
+      appearance.respectReducedMotion = rrm.checked;
+      applyReducedMotionOverride(appearance.respectReducedMotion);
+      renderReducedMotionNotice();
+      saveAppearance(appearance).then(() => showStatus("Setting saved."));
+    };
+  }
+  renderReducedMotionNotice();
+}
+
+function renderReducedMotionNotice() {
+  const notice = document.getElementById("reduced-motion-notice");
+  if (!notice) return;
+  const sysReduced    = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const respectActive = appearance.respectReducedMotion !== false;
+  notice.hidden = !(sysReduced && respectActive);
 }
 
 function renderGlowOptions() {
@@ -1055,6 +1076,7 @@ async function reloadData() {
   applyTheme(ap.theme, ap.accent);
   applyFontSize(ap.fontSize || "medium");
   applyGlow(ap.glowMode, ap.glowColor, ap.glowIntensity);
+  applyReducedMotionOverride(ap.respectReducedMotion);
   renderShortcutList();
   renderEngineList();
   renderAppearance();
@@ -1147,7 +1169,7 @@ async function processImport(data, doReplace) {
   if (doReplace) {
     if (data.shortcuts)     { shortcuts = data.shortcuts; await saveShortcuts(shortcuts); }
     if (data.searchEngines) { engines   = data.searchEngines; await saveSearchEngines(engines); }
-    if (data.appearance)    { appearance = { ...appearance, ...data.appearance }; await saveAppearance(appearance); applyTheme(appearance.theme, appearance.accent); applyFontSize(appearance.fontSize); applyGlow(appearance.glowMode, appearance.glowColor, appearance.glowIntensity); }
+    if (data.appearance)    { appearance = { ...appearance, ...data.appearance }; await saveAppearance(appearance); applyTheme(appearance.theme, appearance.accent); applyFontSize(appearance.fontSize); applyGlow(appearance.glowMode, appearance.glowColor, appearance.glowIntensity); applyReducedMotionOverride(appearance.respectReducedMotion); }
   } else {
     if (data.shortcuts) {
       const existingKeys = new Set(shortcuts.map(s => s.key));
@@ -1178,11 +1200,13 @@ document.getElementById("btn-reset-appearance").addEventListener("click", () => 
     showTime: true, showDate: true, showWeather: false, tempUnit: "C",
     showHints: true, showMostVisited: true, showVisitCounts: false, showSettingsBtn: true,
     glowMode: "off", glowColor: "blue", glowIntensity: "subtle",
+    respectReducedMotion: true,
   };
   appearance = { ...appearance, ...defaults };
   applyTheme(appearance.theme, appearance.accent);
   applyFontSize(appearance.fontSize);
   applyGlow("off", "blue", "subtle");
+  applyReducedMotionOverride(true);
   saveAppearance(appearance).then(() => { renderAppearance(); showStatus("Appearance settings reset."); });
 });
 

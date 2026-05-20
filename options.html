@@ -255,6 +255,18 @@
       </section>
 
       <section class="settings-section">
+        <h2 class="section-title">Motion</h2>
+        <div class="toggle-row">
+          <div class="toggle-text">
+            <span class="toggle-label">Respect system Reduce Motion</span>
+            <span class="toggle-desc">When enabled, LaunchTab disables glow animations if your system requests reduced motion.</span>
+          </div>
+          <label class="toggle-wrap"><input type="checkbox" id="toggle-respect-reduced-motion" class="toggle-input"><span class="toggle-track"></span></label>
+        </div>
+        <p id="reduced-motion-notice" class="section-desc" hidden>Glow animation is currently disabled by your system Reduce Motion setting.</p>
+      </section>
+
+      <section class="settings-section">
         <h2 class="section-title">Font Size</h2>
         <div class="font-size-row">
           <button class="font-size-btn" data-size="small">Small</button>

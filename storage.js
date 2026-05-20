@@ -189,6 +189,8 @@ const DEFAULT_APPEARANCE = {
   glowMode:        "off",         // "off" | "static" | "pulse"
   glowColor:       "blue",        // "blue" | "purple" | "green" | "neutral"
   glowIntensity:   "subtle",      // "subtle" | "medium" | "strong"
+  // Motion
+  respectReducedMotion: true,     // honour prefers-reduced-motion OS setting
 };
 
 function getAppearance() {
@@ -206,11 +208,12 @@ function getAppearance() {
 function saveAppearance(settings) {
   // Mirror theme+accent+glow to localStorage for instant no-flash application
   try {
-    localStorage.setItem("lt_theme",         settings.theme         || "graphite");
-    localStorage.setItem("lt_accent",        settings.accent        || "blue");
-    localStorage.setItem("lt_glow_mode",     settings.glowMode      || "off");
-    localStorage.setItem("lt_glow_color",    settings.glowColor     || "blue");
-    localStorage.setItem("lt_glow_intensity",settings.glowIntensity || "subtle");
+    localStorage.setItem("lt_theme",                  settings.theme                        || "graphite");
+    localStorage.setItem("lt_accent",                 settings.accent                       || "blue");
+    localStorage.setItem("lt_glow_mode",              settings.glowMode                     || "off");
+    localStorage.setItem("lt_glow_color",             settings.glowColor                    || "blue");
+    localStorage.setItem("lt_glow_intensity",         settings.glowIntensity                || "subtle");
+    localStorage.setItem("lt_respect_reduced_motion", settings.respectReducedMotion !== false ? "true" : "false");
   } catch (_) { /* ignore */ }
   return getStore().then(store => storeSet(store, { [APPEARANCE_KEY]: settings }));
 }
